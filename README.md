@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.9
+# Simulateur crypto — V0.10
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -21,6 +21,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Perpétuels avec levier (V0.7) : BTC, ETH et SOL, marge en USDT, levier selon la difficulté, prix de liquidation, financement toutes les 8 h au taux réel, liquidation possible pendant l'absence (sauf en Investisseur).
 - Fiscalité (V0.8) : méthode française du portefeuille global, seuil de 305 €, flat tax de 31,4 %, minage en micro-BNC, déclaration au printemps et paiement en septembre ; prélevée, automatique ou à remplir soi-même selon la difficulté.
 - Vie quotidienne (V0.9) : salaire selon le métier et l'expérience, grille des apprentis, job étudiant, loyer selon la ville et le logement, courses, forfaits et loisirs selon le mode de vie, découvert avec agios, changement de situation avec un mois de délai.
+- Réglages avancés (V0.10) : douze réglages libres avant de lancer la partie (vitesse du temps, minage, électricité, frais, pannes, levier, impôts…) ; au moindre changement, la partie devient « Personnalisée » avec son propre classement.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -82,6 +83,8 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `data/altcoins.json`, `scripts/maj-altcoins.mjs` | Données réseau des autres cryptos, mises à jour chaque heure par GitHub Actions |
 | `js/fiscalite.js`, `js/jeufisc.js`, `js/views-fisc.js` | Fiscalité : calculs (testés), déclarations, écran |
 | `js/state.js` | Sauvegarde locale et règles de la partie |
+| `js/vie.js`, `js/jeuvie.js`, `js/views-vie.js` | Vie quotidienne : salaires, loyers, dépenses (testés), écran |
+| `js/views-reglages.js` | Écran des réglages avancés |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -89,7 +92,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.9 Vie quotidienne, métiers complets et date de départ libre.
+1. Date de départ libre et mode rejeu, métiers complets.
 2. V1.0 Notifications et synchro entre appareils.
 
 ## Décisions

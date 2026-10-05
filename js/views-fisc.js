@@ -1,5 +1,5 @@
 // Section « Impôts » de l'onglet Finances.
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { fiscDe, bilan, calendrier, SEUIL_CESSIONS, PFU } from './fiscalite.js';
 import { mode } from './jeufisc.js';
 import { eur, dateHeure, echapper as e } from './format.js';
@@ -10,8 +10,8 @@ export function sectionImpots(ctx) {
   const { partie, app } = ctx;
   const m = mode(partie);
   if (m === 'off') return `<section class="section"><div class="section-titre"><h2>Impôts</h2></div>
-    <div class="carte" style="font-size:13px;color:var(--texte-2)">Fiscalité désactivée en Découverte.</div></section>`;
-  const d = DIFFICULTES[partie.difficulte];
+    <div class="carte" style="font-size:13px;color:var(--texte-2)">Fiscalité désactivée dans ta partie.</div></section>`;
+  const d = reglesDe(partie);
   const f = fiscDe(partie);
   const an = new Date().getFullYear();
   const b = bilan(f, an, partie.profil.situation);

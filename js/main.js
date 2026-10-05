@@ -1,6 +1,7 @@
 // Point d'entrée : état de l'interface, actions du joueur, mises à jour en direct.
 import * as M from './market.js';
-import { DIFFICULTES, INTERVALLES } from './config.js';
+import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
+import { vueReglages, valeurTexte } from './views-reglages.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
@@ -37,7 +38,8 @@ const app = {
   brouillon: {
     profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', experience: 'debutant', anneeApprentissage: 1, logement: 'appart', modeVie: 'normal' },
     difficulte: 'expert',
-    capital: DIFFICULTES.expert.capital
+    capital: DIFFICULTES.expert.capital,
+    reglages: {}
   },
   enCours: false,
   confirmation: null,
@@ -73,19 +75,25 @@ function ctx() {
   const cache = partie?.minage?.couleurs || {};
   return { app, partie, M: marche, D, F, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
 }
-function difficulte() { return DIFFICULTES[partie.difficulte]; }
+function difficulte() { return reglesDe(partie); }
 
 // ---------- Affichage ----------
 
 function rendre() {
   const c = ctx();
-  const vues = { lancement: vueLancement, profil: vueProfil, partie: vueNouvellePartie, jeu: vueJeu };
+  const vues = { lancement: vueLancement, profil: vueProfil, partie: vueNouvellePartie, reglages: vueReglages, jeu: vueJeu };
   racine.innerHTML = vues[app.ecran](c);
   rendreSuperpositions();
   if (app.ecran === 'jeu' && app.onglet === 'marche' && app.crypto) preparerGraphique();
 }
 
 function rendreSuperpositions() { superpositions.innerHTML = vueSuperpositions(app); }
+
+// Réglages avancés : fusionne, borne et garde seulement les écarts à la difficulté de base.
+function regler(cle, val) {
+  const b = app.brouillon;
+  b.reglages = nettoyerReglages(b.difficulte, { ...DIFFICULTES[b.difficulte], ...b.reglages, [cle]: val });
+}
 
 function changerEcran(ecran) { app.ecran = ecran; rendre(); window.scrollTo(0, 0); }
 
@@ -375,13 +383,22 @@ const actions = {
   },
   'vers-profil': () => changerEcran('profil'),
   capital: v => { app.brouillon.capital = Number(v); rendre(); },
-  difficulte: v => { app.brouillon.difficulte = v; app.brouillon.capital = DIFFICULTES[v].capital; rendre(); },
+  difficulte: v => { const b = app.brouillon; b.difficulte = v; b.capital = DIFFICULTES[v].capital; b.reglages = nettoyerReglages(v, { ...DIFFICULTES[v], ...b.reglages }); rendre(); },
+  'vers-reglages': () => changerEcran('reglages'),
+  'fin-reglages': () => changerEcran('partie'),
+  'reg-reset': () => { app.brouillon.reglages = {}; rendre(); },
+  reg: v => {
+    const i = v.indexOf(':'), cle = v.slice(0, i), brut = v.slice(i + 1);
+    const g = REGLAGES.find(x => x.cle === cle); if (!g) return;
+    const val = g.type === 'bool' ? brut === 'true' : g.options.find(o => String(o[0]) === brut)?.[0];
+    regler(cle, val); rendre();
+  },
   lancer: () => {
     const b = app.brouillon;
     const profil = { ...b.profil, prenom: b.profil.prenom.trim(), nom: b.profil.nom.trim(), ville: b.profil.ville.trim() };
     if (!(profil.situation === 'alternant' || profil.situation === 'salarie')) delete profil.metier;
     effacer();
-    partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital });
+    partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital, reglages: b.reglages });
     sauver(partie);
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
@@ -423,7 +440,7 @@ const actions = {
   'rig-carte': v => { app.rig.carte = v; rendre(); },
   'rig-coin': v => { app.rig.coin = v; rendre(); },
   'acheter-rig': () => {
-    const b = app.rig, r = calculerRig(b.carte, b.nb, b.coin), d = DIFFICULTES[partie.difficulte];
+    const b = app.rig, r = calculerRig(b.carte, b.nb, b.coin), d = reglesDe(partie);
     confirmer('Commander ce rig ?', `${b.nb} × ${r.carte.nom}, ${r.alims} alimentation${r.alims > 1 ? 's' : ''}, châssis et kit : ${eur(r.prix)} prélevés sur ta banque.`, 'Commander', () => {
       const res = acheterRig(partie, b.carte, b.nb, b.coin, D.etat.eurUsd);
       if (res.erreur) return toast(res.erreur, 'erreur');
@@ -487,7 +504,7 @@ const actions = {
   },
   'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
   'acheter-machine': id => {
-    const m = modele(id), d = DIFFICULTES[partie.difficulte];
+    const m = modele(id), d = reglesDe(partie);
     if (!D.etat.eurUsd) return toast('Taux euro-dollar indisponible pour le moment. Réessaie dans un instant.', 'erreur');
     const px = prixMachineEUR(m, D.etat.eurUsd);
     const lieu = app.lieuAchat || 'maison';
@@ -550,6 +567,12 @@ document.addEventListener('input', ev => {
   if (!el) return;
   const k = el.dataset.input;
   if (k.startsWith('profil.')) { app.brouillon.profil[k.slice(7)] = el.value; if (k === 'profil.metier') rendre(); }
+  else if (k.startsWith('reg:')) {
+    const g = REGLAGES.find(x => x.cle === k.slice(4)); if (!g) return;
+    regler(g.cle, Number(el.value) / (g.echelle || 1));
+    const t = racine.querySelector(`[data-reg-val="${g.cle}"]`);
+    if (t) t.textContent = valeurTexte(g, g.cle in app.brouillon.reglages ? app.brouillon.reglages[g.cle] : DIFFICULTES[app.brouillon.difficulte][g.cle]);
+  }
   else if (k === 'car-metier') { carriere().metier = el.value; rendre(); }
   else if (k === 'capital') {
     app.brouillon.capital = Number(el.value);
@@ -566,7 +589,7 @@ document.addEventListener('input', ev => {
   else if (k === 'rig-nb') { app.rig.nb = Number(el.value); const t = racine.querySelector('[data-rig-nb]'); if (t) t.textContent = el.value; }
 });
 
-document.addEventListener('change', ev => { if (ev.target.dataset && ['rig-nb', 'perp-levier'].includes(ev.target.dataset.input)) rendre(); });
+document.addEventListener('change', ev => { const k = ev.target.dataset && ev.target.dataset.input; if (k && (['rig-nb', 'perp-levier'].includes(k) || k.startsWith('reg:'))) rendre(); });
 
 // ---------- Démarrage ----------
 

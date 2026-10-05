@@ -1,7 +1,7 @@
 // Règles du minage dans la partie : achats, mise en marche, factures, versements.
 import { HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur, prixHebergeurEUR, supplementAbonnementParSeconde } from './minage.js';
 import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD } from './minage.js';
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { journal } from './state.js';
 import { noterMinage } from './jeufisc.js';
 import { calculerRig, COINS_GPU, RIG } from './altcoins.js';
@@ -37,7 +37,7 @@ export function thEnMarche(minage) {
 
 export function acheter(partie, id, eurUsd, lieu = 'maison') {
   const m = modele(id);
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   if (!m) return { erreur: 'Machine inconnue.' };
   const h = lieu !== 'maison' ? hebergeur(lieu) : null;
   if (!h && partie.profil.logement === 'parents') return { erreur: "Chez tes parents, pas de place pour un ASIC : bruit, chaleur et compteur partagé. Fais-la livrer chez un hébergeur." };
@@ -88,7 +88,7 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
   const r = mn.reseau;
   if (!r) return []; // sans données réseau, on attend plutôt que de compter l'électricité seule
   Object.assign(mn.couleurs, couleurs || {});
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const pl = partie.plateforme;
   const evts = avancer(mn, mn.dernierCalcul, maintenant, {
     reseau: r, couleurs: mn.couleurs, multMinage: d.minage, multElec: d.elec, peutRecevoir: pl.statut === 'ouvert',
@@ -168,7 +168,7 @@ export function devisReparation(partie, m) {
   const p = infosPanne(m);
   if (!p) return null;
   const garantie = m.garantieFin && Date.now() < m.garantieFin;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const loin = m.lieu && m.lieu !== 'maison' ? 5 : 0; // le technicien de l'hébergeur passe sous quelques jours
   return { panne: p, garantie, cout: garantie ? ENVOI_SAV : p.cout, delai: ((garantie ? Math.max(p.jours, 10) : p.jours) + loin) * 864e5 / d.temps };
 }
@@ -218,7 +218,7 @@ export function acheterVentilation(partie) {
 // ---------- Rigs de cartes graphiques (V0.5) ----------
 
 export function acheterRig(partie, carteId, nb, coin, eurUsd) {
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   if (partie.profil.logement === 'parents') return { erreur: "Chez tes parents, le compteur est partagé : pas de rig possible pour l'instant." };
   if (!(nb >= 1 && nb <= RIG.maxCartes) || !COINS_GPU[coin]) return { erreur: 'Configuration de rig invalide.' };
   const r = calculerRig(carteId, nb, coin);
@@ -269,7 +269,7 @@ export function envoyer(partie, id, hostId, eurUsd) {
   const mn = minageDe(partie);
   const m = mn.machines.find(x => x.id === id);
   const h = hebergeur(hostId);
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   if (!m || !h || m.statut !== 'arret' || !chezSoi(m)) return { erreur: 'Arrête la machine avant de l\'envoyer.' };
   if (spec(m).rig) return { erreur: 'Les hébergeurs n\'acceptent que des ASIC.' };
   if (!eurUsd) return { erreur: 'Taux euro-dollar indisponible pour le moment.' };
@@ -286,7 +286,7 @@ export function envoyer(partie, id, hostId, eurUsd) {
 export function rapatrier(partie, id) {
   const mn = minageDe(partie);
   const m = mn.machines.find(x => x.id === id);
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   if (!m || chezSoi(m) || m.statut !== 'arret') return { erreur: 'Arrête la machine avant de la faire revenir.' };
   if (Date.now() < (m.engagementFin || 0)) return { erreur: 'Engagement en cours jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') + '. Tu peux la vendre sur place en attendant.' };
   if (partie.profil.logement === 'parents') return { erreur: 'Pas de place chez tes parents pour la récupérer.' };

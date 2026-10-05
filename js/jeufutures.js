@@ -1,5 +1,5 @@
 // Règles des perpétuels dans la partie : portefeuille de marge, positions, financement, liquidations.
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { contrat, ouvrir, fermer, estLiquidee, financement, prochainFinancement, risque, pnl } from './futures.js';
 import { journal } from './state.js';
 import { noterAchat, noterCession } from './jeufisc.js';
@@ -34,8 +34,8 @@ export function transferer(partie, sens, montant, eurUsd) {
 
 export function ouvrirPosition(partie, p, marche, regles) {
   const f = futuresDe(partie);
-  const d = DIFFICULTES[partie.difficulte];
-  if (!d.levierMax) return { erreur: 'Les dérivés sont désactivés en Découverte.' };
+  const d = reglesDe(partie);
+  if (!d.levierMax) return { erreur: 'Les dérivés sont désactivés dans ta partie.' };
   const r = ouvrir({ ...p, bid: marche.bid, ask: marche.ask, pas: regles.pas, minNotional: regles.minNotional, solde: f.soldeUSDT, levierMax: d.levierMax, maintenant: Date.now() });
   if (r.erreur) return r;
   const pos = r.position;
@@ -83,7 +83,7 @@ function payerFinancement(partie, pos, marque, taux, t) {
  */
 export function surPrixMarque(partie, s, m, t = Date.now()) {
   if (!partie.futures) return [];
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const f = partie.futures;
   const evts = [];
   for (const pos of f.positions.filter(x => x.s === s)) {
@@ -102,7 +102,7 @@ export function surPrixMarque(partie, s, m, t = Date.now()) {
 export async function rattraper(partie, F) {
   const f = partie.futures;
   if (!f || !f.positions.length) return [];
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const depuis = f.suiviJusqua || Date.now(), maintenant = Date.now();
   if (maintenant - depuis < 60000) return [];
   const evts = [];

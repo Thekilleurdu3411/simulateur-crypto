@@ -1,5 +1,5 @@
 // Écran des contrats perpétuels.
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { CONTRATS, contrat, prixLiquidation, FRAIS_PRENEUR, pnl, risque } from './futures.js';
 import { futuresDe } from './jeufutures.js';
 import { eur, duree, echapper as e } from './format.js';
@@ -35,8 +35,8 @@ export function valeurFutures(k, arg, ctx) {
 
 export function ongletPerp(ctx, live) {
   const { partie, app, D } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
-  if (!d.levierMax) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Les dérivés avec levier sont désactivés en Découverte. Ils sont disponibles à partir de la difficulté Investisseur.</div>`;
+  const d = reglesDe(partie);
+  if (!d.levierMax) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Les dérivés avec levier sont désactivés dans ta partie (Découverte, ou levier à zéro dans les réglages avancés).</div>`;
   if (partie.plateforme.statut !== 'ouvert') return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Ouvre d'abord un compte sur la plateforme (onglet Finances).</div>`;
   const f = futuresDe(partie);
   const p = app.perp;

@@ -1,5 +1,5 @@
 // Écrans de l'appli : chaque fonction renvoie le HTML d'un écran.
-import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VERSION } from './config.js';
+import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VERSION, reglesDe } from './config.js';
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
 import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
@@ -9,6 +9,7 @@ import { ongletPerp, valeurFutures } from './views-futures.js';
 import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
 import { sectionVie, apercuProfil } from './views-vie.js';
+import { changements } from './views-reglages.js';
 import { EXPERIENCES } from './vie.js';
 
 const ICONES = {
@@ -95,7 +96,7 @@ function estimation(ctx) {
   const c = M.cryptosDisponibles().find(x => x.s === app.crypto);
   const t = c && M.ticker(c.s);
   if (!t) return '';
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const sx = app.saisie;
   if (app.typeOrdre !== 'marche') {
     const q = nombre(sx.quantite), p = nombre(sx.prix), st = nombre(sx.limiteStop);
@@ -132,7 +133,7 @@ export function vueLancement(ctx) {
       <p>Trading et minage sur le vrai marché, en temps réel. Tu pars de zéro, comme dans la vraie vie.</p>
     </div>
     ${partie ? `<div class="carte">
-      <div class="ligne-kv"><span>Partie en cours</span><span class="badge neutre">${e(DIFFICULTES[partie.difficulte].nom)}</span></div>
+      <div class="ligne-kv"><span>Partie en cours</span><span class="badge neutre">${e(reglesDe(partie).nom)}</span></div>
       <div class="carte-titre">${e(partie.profil.prenom)} ${e(partie.profil.nom)}</div>
       <div class="discret" style="font-size:13px">Commencée le ${e(dateHeure(partie.creeLe))}</div>
       <button class="bouton" data-action="continuer">Continuer la partie</button>
@@ -194,6 +195,7 @@ export function vueProfil(ctx) {
 
 export function vueNouvellePartie(ctx) {
   const b = ctx.app.brouillon, p = b.profil, d = DIFFICULTES[b.difficulte];
+  const chg = changements(b.difficulte, b.reglages);
   const chips = [1000, 5000, 10000, 50000];
   return `<main class="ecran">
     <div class="entete">
@@ -229,8 +231,9 @@ export function vueNouvellePartie(ctx) {
           <span class="t">${x.nom}</span><span class="s">${x.ligne}</span><span class="score">Score ×${String(x.score).replace('.', ',')}</span></button>`).join('')}
       </div>
       <div class="carte" style="gap:8px">
-        <div style="font-size:13px;font-weight:700">En ${d.nom}</div>
+        <div style="font-size:13px;font-weight:700">En ${d.nom}${chg.length ? ' · Personnalisée' : ''}</div>
         ${d.effets.map(t => `<div class="effet"><span class="puce-pt"></span><span>${e(t)}</span></div>`).join('')}
+        ${chg.length ? `<div style="font-size:13px;font-weight:700;color:var(--ambre);margin-top:4px">Tes réglages</div>${chg.map(t => `<div class="effet"><span class="puce-pt"></span><span>${e(t)}</span></div>`).join('')}` : ''}
       </div>
     </section>
     <section class="section">
@@ -240,18 +243,18 @@ export function vueNouvellePartie(ctx) {
           <button aria-pressed="true">Aujourd'hui (direct)</button>
           <button disabled>Date passée</button>
         </div>
-        <p class="discret" style="font-size:13px">Ta partie démarre maintenant, synchronisée sur le marché réel. Le départ à une date passée arrive en version 0.9.</p>
+        <p class="discret" style="font-size:13px">Ta partie démarre maintenant, synchronisée sur le marché réel. Le départ à une date passée arrive dans une prochaine version.</p>
       </div>
     </section>
     <section class="section">
       <div class="section-titre"><h2>Options</h2></div>
       <div class="carte liste-lignes" style="padding:0 16px;gap:0">
         <div class="rangee"><span>Devise d'affichage</span><span class="discret">Euro (€)</span></div>
-        <div class="rangee"><span>Réglages avancés</span><span class="verrou">Version 0.3</span></div>
+        <button class="rangee" style="width:100%;background:none;border:0;text-align:left;color:inherit;font:inherit" data-action="vers-reglages"><span>Réglages avancés</span><span class="${chg.length ? '' : 'discret'}" style="${chg.length ? 'color:var(--ambre)' : ''}">${chg.length ? chg.length + ' modifié' + (chg.length > 1 ? 's' : '') : 'Aucun changement'} ›</span></button>
       </div>
     </section>
     <button class="bouton" data-action="lancer">Lancer la partie</button>
-    <p class="discret" style="font-size:12px;text-align:center">Classement : ${d.nom}</p>
+    <p class="discret" style="font-size:12px;text-align:center">Classement : ${chg.length ? 'Personnalisée (base ' + d.nom + ')' : d.nom}</p>
   </main>`;
 }
 
@@ -262,7 +265,7 @@ const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Mina
 
 export function vueJeu(ctx) {
   const { app, partie } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const corps = {
     accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances,
     minage: c => ongletMinage(c, live),
@@ -287,7 +290,7 @@ function ongletBientot(titre, version, texte) {
 
 function ongletAccueil(ctx) {
   const { partie, M } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const pl = partie.plateforme;
   const etapes = [
     ['Ouvrir un compte sur la plateforme', pl.statut === 'ouvert'],
@@ -362,7 +365,7 @@ function detailCrypto(ctx) {
   const { app, partie } = ctx;
   const c = ctx.M.cryptosDisponibles().find(x => x.s === app.crypto);
   if (!c) return '<div class="vide">Crypto indisponible.</div>';
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const pl = partie.plateforme;
   const a = pl.actifs[c.base];
   const ouvert = pl.statut === 'ouvert';
@@ -461,7 +464,7 @@ function carteAbsence(ctx) {
 function ongletFinances(ctx) {
   const { app, partie } = ctx;
   const pl = partie.plateforme;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const versPlat = app.virement.sens === 'plateforme';
   let carteP;
   if (pl.statut === 'aucun') {
@@ -504,7 +507,8 @@ function ongletFinances(ctx) {
     <section class="section">
       <div class="section-titre"><h2>Partie</h2></div>
       <div class="carte" style="gap:8px">
-        <div class="ligne-kv"><span>Difficulté</span><span>${e(d.nom)} · score ×${String(d.score).replace('.', ',')}</span></div>
+        <div class="ligne-kv"><span>Difficulté</span><span>${d.personnalisee ? `Personnalisée (base ${e(d.base)})` : `${e(d.nom)} · score ×${String(d.score).replace('.', ',')}`}</span></div>
+        ${d.personnalisee ? changements(partie.difficulte, partie.reglages).map(t => `<div class="effet" style="font-size:12px"><span class="puce-pt"></span><span>${e(t)}</span></div>`).join('') : ''}
         <div class="ligne-kv"><span>Début</span><span>${e(dateHeure(partie.creeLe))}</span></div>
         <div class="ligne-kv"><span>Capital de départ</span><span class="num">${eur(partie.capitalDepart)}</span></div>
         <div class="grille-2" style="margin-top:8px">

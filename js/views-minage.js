@@ -1,7 +1,7 @@
 // Onglet Minage : parc, pool, contrat électrique, réseau réel, boutique.
 import { HEBERGEURS, ABONNEMENTS, CHANGEMENT_PUISSANCE, ENVOI, FRAIS_ANNEXES_USD, hebergeur, prixHebergeurEUR } from './minage.js';
 import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
 import { CARTES, COINS_GPU, RIG, FRAIS_POOL_ALT, calculerRig, coinsParSeconde, prixAltEUR } from './altcoins.js';
 import { eur, prix, qte, dateHeure, echapper as e } from './format.js';
@@ -19,7 +19,7 @@ export function fmtHash(h) {
 // Gains (€) et électricité (€) estimés par jour pour une machine (catalogue ou rig).
 function estimer(md, ctx, mn) {
   const { partie, D, M } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const r = D.etat.reseau || mn.reseau, alt = D.etat.alt, prixBTC = M.prixDeBase('BTC');
   if (!prixBTC) return null;
   let gain = 0;
@@ -56,7 +56,7 @@ export function ongletMinage(ctx, live) {
 
 function parc(ctx, mn, live) {
   const { partie, D, M } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const dispo = puissanceDispo(partie.profil.logement, mn.contrat.kva);
   const kw = kwEnMarche(mn), th = thEnMarche(mn);
   const p = pool(mn.pool);
@@ -114,7 +114,7 @@ function parc(ctx, mn, live) {
              <div class="ligne-kv" style="font-size:13px"><span>Blanc HP / HC</span><span class="num">${TARIFS.tempo.blanc.map(v => String(v).replace('.', ',')).join(' / ')} €</span></div>
              <div class="ligne-kv" style="font-size:13px"><span>Rouge HP / HC</span><span class="num">${TARIFS.tempo.rouge.map(v => String(v).replace('.', ',')).join(' / ')} €</span></div>
              <p class="discret" style="font-size:12px">Heures creuses de 22 h à 6 h. Couleurs du vrai calendrier Tempo ; si elle est inconnue, le prix Base s'applique.</p>`}
-        <p class="discret" style="font-size:12px">Tarif Bleu EDF au 1er août 2026${d.elec !== 1 ? ` · ta difficulté applique ${d.elec < 1 ? '−' + Math.round((1 - d.elec) * 100) + ' %' : ''}` : ''}.</p>
+        <p class="discret" style="font-size:12px">Tarif Bleu EDF au 1er août 2026${d.elec !== 1 ? ` · ta partie applique ${d.elec < 1 ? '−' : '+'}${Math.round(Math.abs(1 - d.elec) * 100)} %` : ''}.</p>
       </div>
     </section>`;
 }
@@ -182,7 +182,7 @@ function machineCarte(m, ctx, live) {
 
 function boutique(ctx, mn) {
   const { partie, D, M } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const eurUsd = D.etat.eurUsd;
   const r = D.etat.reseau || mn.reseau;
   const prixBTC = M.prixDeBase('BTC');
@@ -270,7 +270,7 @@ export function ongletInstallations(ctx, live) {
 
 function constructeurRig(ctx, mn) {
   const { app, partie } = ctx;
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const b = app.rig;
   const r = calculerRig(b.carte, b.nb, b.coin);
   const md = { th: 0, w: r.w, production: [{ coin: b.coin, h: r.h }] };

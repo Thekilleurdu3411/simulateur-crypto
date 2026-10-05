@@ -153,3 +153,13 @@ Tout peut être changé : il suffit de le demander.
 | Découvert | Autorisé, 16 % d'agios par an | Taux courant d'un découvert non autorisé. |
 | Changer de situation | Possible à tout moment depuis Finances ; effectif après un mois de jeu (préavis ou recherche) et annulable avant | Délai réaliste d'un changement d'emploi. |
 | Non simulé pour l'instant | Impôt sur le revenu du salaire, transports, inflation, aides (APL, prime d'activité), allocations chômage | Prochaines étapes de la vie quotidienne. |
+
+## V0.10
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Réglages avancés | 12 réglages libres avant de lancer la partie : vitesse du temps (×1 à ×20), multiplicateur de minage (×0,25 à ×10), prix de l'électricité (0 à 200 %), frais de trading (0 à 0,5 %), exécution des ordres, fréquence des pannes (×0 à ×3), voisinage, protection pendant l'absence, levier maximum (0 à ×125), liquidation pendant l'absence, mode des impôts, estimations de rentabilité | Demande : tout ce qui implique un multiplicateur est libre. Les bornes sont des choix **à valider**. |
+| Partie personnalisée | Au moindre écart avec la difficulté choisie, la partie devient « Personnalisée (base X) » et a son propre classement ; revenir à la valeur de base annule l'écart | Demande. |
+| Changer de difficulté de base | Les réglages déjà modifiés sont gardés s'ils diffèrent encore de la nouvelle base | Évite de perdre ses réglages en changeant de difficulté. |
+| Score | Pas de coefficient de score pour une partie personnalisée : classement séparé | Un coefficient automatique serait arbitraire. **À valider.** |
+| Modifiable en cours de partie | Non : les réglages sont fixés au lancement | Garde les classements comparables. |

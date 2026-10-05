@@ -1,5 +1,5 @@
 // Fiscalité dans la partie : enregistrement des opérations, prélèvements, déclarations et paiements.
-import { DIFFICULTES } from './config.js';
+import { reglesDe } from './config.js';
 import { fiscDe, acquisition, cession, bilan, calendrier, redressement } from './fiscalite.js';
 import { journal } from './state.js';
 import { eur } from './format.js';
@@ -10,7 +10,7 @@ export function definirEvaluateur(f) { evaluateur = f; }
 
 // Modes : Découverte désactivée, Investisseur prélevée à chaque vente, Expert automatique, Réalité manuelle.
 export function mode(partie) {
-  return { decouverte: 'off', investisseur: 'preleve', expert: 'auto', realite: 'manuel' }[partie.difficulte] || 'auto';
+  return reglesDe(partie).impots || 'auto';
 }
 
 export function noterAchat(partie, eurDepense, t = Date.now()) {

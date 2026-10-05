@@ -1,10 +1,10 @@
 // Vie quotidienne dans la partie : échéances mensuelles, changements d'emploi.
-import { DIFFICULTES } from './config.js';
+import { DIFFICULTES, reglesDe } from './config.js';
 import { avancerVie, MOIS, trouverMetier } from './vie.js';
 import { COMPTEUR } from './minage.js';
 import { journal } from './state.js';
 
-export function periode(partie) { return MOIS / DIFFICULTES[partie.difficulte].temps; }
+export function periode(partie) { return MOIS / reglesDe(partie).temps; }
 
 export function vieDe(partie) {
   if (!partie.vie) partie.vie = { prochaineEcheance: Date.now() + periode(partie) };

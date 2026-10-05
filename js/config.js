@@ -1,7 +1,7 @@
 // Données fixes du jeu : difficultés, cryptos, profils.
 // Les prix ne sont jamais ici : ils viennent toujours du marché réel.
 
-export const VERSION = '0.9.0';
+export const VERSION = '0.10.0';
 
 // Point d'accès public de Binance réservé aux données de marché (sans compte, sans clé).
 export const API_REST = 'https://data-api.binance.vision';
@@ -15,28 +15,67 @@ export const DIFFICULTES = {
   decouverte: {
     id: 'decouverte', nom: 'Découverte', ligne: 'Pour apprendre sans stress',
     capital: 10000, temps: 10, minage: 4, elec: 0.5, score: 0.25,
-    frais: 0, execution: 'milieu', aides: true, pannes: 0.1, bruit: 'off', protectionAbsence: true, levierMax: 0, liquidationAbsence: false,
+    frais: 0, execution: 'milieu', aides: true, pannes: 0.1, bruit: 'off', protectionAbsence: true, levierMax: 0, liquidationAbsence: false, impots: 'off',
     effets: ['Temps hors marché ×10, minage ×4', 'Électricité −50 %, ni frais ni impôts', 'Pannes très rares', 'Aucune perte pendant ton absence']
   },
   investisseur: {
     id: 'investisseur', nom: 'Investisseur', ligne: 'Réaliste, avec un coup de pouce',
     capital: 5000, temps: 4, minage: 2, elec: 0.75, score: 0.5,
-    frais: 0.0005, execution: 'meilleur', aides: true, pannes: 0.5, bruit: 'alertes', protectionAbsence: false, levierMax: 5, liquidationAbsence: false,
+    frais: 0.0005, execution: 'meilleur', aides: true, pannes: 0.5, bruit: 'alertes', protectionAbsence: false, levierMax: 5, liquidationAbsence: false, impots: 'preleve',
     effets: ['Temps ×4, minage ×2', 'Électricité −25 %, frais divisés par deux', 'Flat tax prélevée automatiquement', 'Levier ×5 max, alerte avant liquidation']
   },
   expert: {
     id: 'expert', nom: 'Expert', ligne: 'Presque tout est réel',
     capital: 2000, temps: 2, minage: 1.25, elec: 1, score: 0.75,
-    frais: 0.001, execution: 'carnet', aides: true, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true,
+    frais: 0.001, execution: 'carnet', aides: true, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'auto',
     effets: ['Temps ×2, minage ×1,25', 'Électricité, frais et pannes réels', 'Impôts calculés pour toi', 'Une seule sauvegarde']
   },
   realite: {
     id: 'realite', nom: 'Réalité', ligne: 'La réalité absolue, sans aide',
     capital: 1000, temps: 1, minage: 1, elec: 1, score: 1,
-    frais: 0.001, execution: 'carnet', aides: false, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true,
-    effets: ["Tout est réel, rien n'est modifiable", 'Aucune estimation de rentabilité', 'Déclaration fiscale à remplir toi-même', 'Une sauvegarde, aucun retour arrière']
+    frais: 0.001, execution: 'carnet', aides: false, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'manuel',
+    effets: ['Tout est réel, aucun coup de pouce', 'Aucune estimation de rentabilité', 'Déclaration fiscale à remplir toi-même', 'Une sauvegarde, aucun retour arrière']
   }
 };
+
+// Réglages avancés : tout multiplicateur est libre ; la moindre modification rend la partie « Personnalisée ».
+export const REGLAGES = [
+  { cle: 'temps', nom: 'Vitesse du temps hors marché', aide: 'Accélère la vie, les livraisons, les factures et les échéances. Le marché reste en temps réel.', type: 'nombre', min: 1, max: 20, pas: 1, unite: '×' },
+  { cle: 'minage', nom: 'Multiplicateur de minage', aide: 'Multiplie les gains de toutes tes machines.', type: 'nombre', min: 0.25, max: 10, pas: 0.25, unite: '×' },
+  { cle: 'elec', nom: "Prix de l'électricité", aide: 'En pourcentage du tarif réel.', type: 'nombre', min: 0, max: 200, pas: 5, unite: '%', echelle: 100 },
+  { cle: 'frais', nom: 'Frais de trading', aide: 'Commission par ordre au comptant (réel : 0,10 %).', type: 'nombre', min: 0, max: 0.5, pas: 0.01, unite: '%', echelle: 100 },
+  { cle: 'execution', nom: 'Exécution des ordres au marché', type: 'choix', options: [['milieu', 'Prix moyen'], ['meilleur', 'Meilleur prix'], ['carnet', 'Carnet réel']] },
+  { cle: 'pannes', nom: 'Fréquence des pannes', aide: 'Par rapport aux taux de panne réels.', type: 'nombre', min: 0, max: 3, pas: 0.1, unite: '×' },
+  { cle: 'bruit', nom: 'Voisinage et alertes', type: 'choix', options: [['off', 'Aucun'], ['alertes', 'Alertes'], ['reel', 'Réel']] },
+  { cle: 'protectionAbsence', nom: 'Aucune panne pendant ton absence', type: 'bool' },
+  { cle: 'levierMax', nom: 'Levier maximum des perpétuels', aide: '0 désactive les dérivés.', type: 'choix', options: [[0, 'Aucun'], [2, '×2'], [5, '×5'], [10, '×10'], [20, '×20'], [50, '×50'], [125, '×125']] },
+  { cle: 'liquidationAbsence', nom: 'Liquidation possible pendant ton absence', type: 'bool' },
+  { cle: 'impots', nom: 'Impôts', type: 'choix', options: [['off', 'Aucun'], ['preleve', 'Prélevés'], ['auto', 'Automatiques'], ['manuel', 'À déclarer']] },
+  { cle: 'aides', nom: 'Estimations de rentabilité', type: 'bool' }
+];
+
+/** Garde seulement les réglages valides et différents de la difficulté de base. */
+export function nettoyerReglages(base, r) {
+  const d = DIFFICULTES[base], sortie = {};
+  for (const g of REGLAGES) {
+    if (!r || !(g.cle in r)) continue;
+    let v = r[g.cle];
+    if (g.type === 'nombre') { v = Number(v); if (!Number.isFinite(v)) continue; const ech = g.echelle || 1; v = Math.min(g.max, Math.max(g.min, v * ech)) / ech; v = Math.round(v * 1e6) / 1e6; }
+    else if (g.type === 'bool') v = !!v;
+    else if (!g.options.some(o => o[0] === v)) continue;
+    if (v !== d[g.cle]) sortie[g.cle] = v;
+  }
+  return sortie;
+}
+
+/** Règles effectives d'une partie : difficulté de base et réglages avancés. */
+export function reglesDe(partie) {
+  const base = DIFFICULTES[partie.difficulte] || DIFFICULTES.expert;
+  const r = partie.reglages;
+  if (!r || !Object.keys(r).length) return base;
+  return { ...base, ...r, nom: 'Personnalisée', base: base.nom, personnalisee: true };
+}
+
 
 // Paires en euros sur la plateforme. Une paire absente du marché réel est simplement masquée.
 export const CRYPTOS = [

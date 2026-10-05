@@ -1,5 +1,5 @@
 // Sauvegarde locale de la partie (sur le téléphone).
-import { DIFFICULTES, KYC_MINUTES_REEL, VERSION } from './config.js';
+import { KYC_MINUTES_REEL, VERSION, reglesDe, nettoyerReglages } from './config.js';
 
 const CLE = 'simcrypto.partie';
 
@@ -19,25 +19,27 @@ export function effacer() {
   try { localStorage.removeItem(CLE); } catch (e) {}
 }
 
-export function nouvellePartie({ profil, difficulte, capital }) {
-  const d = DIFFICULTES[difficulte];
+export function nouvellePartie({ profil, difficulte, capital, reglages }) {
+  const r = nettoyerReglages(difficulte, reglages);
+  const d = reglesDe({ difficulte, reglages: r });
   const maintenant = Date.now();
   return {
     version: VERSION,
     creeLe: maintenant,
     difficulte,
+    reglages: r,
     depart: { type: 'direct', date: maintenant },
     capitalDepart: capital,
     profil,
     banque: { solde: capital },
     plateforme: { statut: 'aucun', kycFin: null, soldeEUR: 0, actifs: {} },
     vie: { prochaineEcheance: maintenant + 30.44 * 864e5 / d.temps },
-    historique: [{ t: maintenant, type: 'debut', texte: 'Début de la partie en ' + d.nom + ' avec ' + capital.toLocaleString('fr-FR') + ' € en banque' }]
+    historique: [{ t: maintenant, type: 'debut', texte: 'Début de la partie ' + (d.personnalisee ? '(Personnalisée, base ' + d.base + ')' : 'en ' + d.nom) + ' avec ' + capital.toLocaleString('fr-FR') + ' € en banque' }]
   };
 }
 
 export function demarrerKyc(partie) {
-  const d = DIFFICULTES[partie.difficulte];
+  const d = reglesDe(partie);
   const ms = d.temps >= 10 ? 0 : KYC_MINUTES_REEL * 60000 / d.temps;
   partie.plateforme.statut = ms === 0 ? 'ouvert' : 'verification';
   partie.plateforme.kycFin = Date.now() + ms;
