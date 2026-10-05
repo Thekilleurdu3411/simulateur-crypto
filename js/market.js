@@ -8,7 +8,7 @@ const infosCache = {};
 let ws = null, essais = 0, minuterie = null;
 export const etat = { statut: 'connexion', dernierTick: 0 };
 
-function notifier(type, symbole) { for (const f of ecouteurs) f(type, symbole); }
+function notifier(type, symbole, donnees) { for (const f of ecouteurs) f(type, symbole, donnees); }
 export function ecouter(f) { ecouteurs.add(f); return () => ecouteurs.delete(f); }
 
 export function ticker(symbole) { return tickers[symbole] || null; }
@@ -41,7 +41,9 @@ async function chargerTickers() {
 
 function connecter() {
   clearTimeout(minuterie);
-  const flux = CRYPTOS.filter(c => !indisponibles.has(c.s)).map(c => c.s.toLowerCase() + '@miniTicker').join('/');
+  // Mini-tickers pour les prix, bougies d'une minute pour suivre les ordres en attente.
+  const flux = CRYPTOS.filter(c => !indisponibles.has(c.s))
+    .flatMap(c => [c.s.toLowerCase() + '@miniTicker', c.s.toLowerCase() + '@kline_1m']).join('/');
   try { ws = new WebSocket(API_WS + '/stream?streams=' + flux); }
   catch (e) { return planifier(); }
   ws.onopen = () => { essais = 0; etat.statut = 'direct'; notifier('statut'); };
@@ -49,6 +51,11 @@ function connecter() {
     const m = JSON.parse(ev.data);
     const d = m.data;
     if (!d || !d.s) return;
+    if (d.e === 'kline') {
+      const k = d.k;
+      notifier('bougie', d.s, { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c });
+      return;
+    }
     tickers[d.s] = { c: +d.c, o: +d.o, h: +d.h, l: +d.l, q: +d.q, t: d.E || Date.now() };
     etat.dernierTick = Date.now();
     notifier('tick', d.s);
@@ -79,6 +86,26 @@ export async function bougies(symbole, intervalle, limite) {
   return d.map(k => ({ t: k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4] }));
 }
 
+// Bougies réelles d'une période passée (rattrapage hors ligne), par pages de 1000.
+export async function bougiesPeriode(symbole, intervalle, debut, fin) {
+  const tout = [];
+  let depuis = debut;
+  for (let page = 0; page < 60 && depuis < fin; page++) {
+    const d = await json(`/api/v3/klines?symbol=${symbole}&interval=${intervalle}&startTime=${Math.floor(depuis)}&endTime=${Math.floor(fin)}&limit=1000`);
+    if (!d.length) break;
+    for (const k of d) tout.push({ t: k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], fin: k[6] + 1 });
+    depuis = d[d.length - 1][6] + 1;
+    if (d.length < 1000) break;
+  }
+  return tout;
+}
+
+// Meilleurs prix d'achat et de vente actuels.
+export async function meilleursPrix(symbole) {
+  const d = await json('/api/v3/ticker/bookTicker?symbol=' + symbole);
+  return { bid: +d.bidPrice, ask: +d.askPrice };
+}
+
 // Carnet d'ordres réel au moment de l'ordre.
 export async function carnet(symbole) {
   const d = await json(`/api/v3/depth?symbol=${symbole}&limit=100`);
@@ -93,7 +120,8 @@ export async function regles(symbole) {
   const f = d.symbols[0].filters;
   const lot = f.find(x => x.filterType === 'LOT_SIZE') || {};
   const notional = f.find(x => x.filterType === 'NOTIONAL' || x.filterType === 'MIN_NOTIONAL') || {};
-  const r = { pas: lot.stepSize || '0.00000001', minNotional: +(notional.minNotional || 5) };
+  const prixF = f.find(x => x.filterType === 'PRICE_FILTER') || {};
+  const r = { pas: lot.stepSize || '0.00000001', tick: prixF.tickSize || '0.01', minNotional: +(notional.minNotional || 5) };
   infosCache[symbole] = r;
   return r;
 }

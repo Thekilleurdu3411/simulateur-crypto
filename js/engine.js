@@ -99,12 +99,17 @@ export function vendreAuMarche({ quantite, carnet, mode, tauxFrais, pas, minNoti
   };
 }
 
-// Valeur totale du joueur en euros.
+// Valeur totale du joueur en euros, fonds bloqués dans les ordres en attente compris.
 export function patrimoine(partie, prixDe) {
-  let actifs = 0;
+  let actifs = 0, bloqueEUR = 0;
   for (const [base, a] of Object.entries(partie.plateforme.actifs)) {
     const p = prixDe(base);
     if (p) actifs += a.qte * p;
   }
-  return { banque: partie.banque.solde, plateforme: partie.plateforme.soldeEUR, actifs, total: partie.banque.solde + partie.plateforme.soldeEUR + actifs };
+  for (const o of partie.plateforme.ordres || []) {
+    if (o.reserve.eur != null) bloqueEUR += o.reserve.eur;
+    else { const p = prixDe(o.base); if (p) actifs += o.reserve.qte * p; }
+  }
+  const plateforme = partie.plateforme.soldeEUR + bloqueEUR;
+  return { banque: partie.banque.solde, plateforme, actifs, total: partie.banque.solde + plateforme + actifs };
 }

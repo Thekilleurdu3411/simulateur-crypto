@@ -3,21 +3,26 @@ import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES } from './config.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
+import { preparerOrdre, reserveAchat } from './orders.js';
+import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } from './portefeuille.js';
+import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
-import { eur, prix, qte, pct } from './format.js';
+import { eur, prix, qte, pct, duree } from './format.js';
 
 const racine = document.getElementById('app');
 const superpositions = document.getElementById('superpositions');
 
 let partie = charger();
+const saisieVide = () => ({ montant: '', quantite: '', prix: '', stop: '', limiteStop: '' });
 const app = {
   ecran: 'lancement',
   onglet: 'accueil',
   crypto: null,
   intervalle: '1h',
   sens: 'achat',
-  saisie: { montant: '', quantite: '' },
+  typeOrdre: 'marche',
+  saisie: saisieVide(),
   virement: { sens: 'plateforme', montant: '' },
   brouillon: {
     profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', logement: 'appart', modeVie: 'normal' },
@@ -28,10 +33,12 @@ const app = {
   confirmation: null,
   toast: null,
   graph: null,
-  graphErreur: false
+  graphErreur: false,
+  absence: null
 };
 
 function ctx() { return { app, partie, M }; }
+function difficulte() { return DIFFICULTES[partie.difficulte]; }
 
 // ---------- Affichage ----------
 
@@ -115,9 +122,9 @@ function majBougie(symbole) {
   if (!g || !g.bougies || g.s !== symbole) return;
   const t = M.ticker(symbole);
   const der = g.bougies[g.bougies.length - 1];
-  const duree = dureeIntervalle[g.intervalle];
-  if (Date.now() >= der.t + duree && g.intervalle !== '1w') {
-    g.bougies.push({ t: der.t + duree, o: der.c, h: t.c, l: t.c, c: t.c });
+  const d = dureeIntervalle[g.intervalle];
+  if (Date.now() >= der.t + d && g.intervalle !== '1w') {
+    g.bougies.push({ t: der.t + d, o: der.c, h: t.c, l: t.c, c: t.c });
     g.bougies.shift();
   } else {
     der.c = t.c; der.h = Math.max(der.h, t.c); der.l = Math.min(der.l, t.c);
@@ -138,7 +145,8 @@ function cryptoActive() { return M.cryptosDisponibles().find(c => c.s === app.cr
 async function passerOrdre() {
   const c = cryptoActive();
   if (!c || app.enCours) return;
-  const d = DIFFICULTES[partie.difficulte];
+  if (app.typeOrdre !== 'marche') return placerOrdreEnAttente(c);
+  const d = difficulte();
   const pl = partie.plateforme;
   const achat = app.sens === 'achat';
   let montant = 0, quantite = 0;
@@ -150,7 +158,7 @@ async function passerOrdre() {
     quantite = nombre(app.saisie.quantite);
     const dispo = pl.actifs[c.base]?.qte || 0;
     if (quantite <= 0) return toast('Indique une quantité à vendre.', 'erreur');
-    if (quantite > dispo + 1e-12) return toast('Tu ne possèdes que ' + qte(dispo) + ' ' + c.base + '.', 'erreur');
+    if (quantite > dispo + 1e-12) return toast('Tu ne possèdes que ' + qte(dispo) + ' ' + c.base + ' disponibles.', 'erreur');
   }
 
   app.enCours = true; rendre();
@@ -167,26 +175,71 @@ async function passerOrdre() {
 
   const glisse = res.glissement > 0.00005 ? ' · glissement ' + pct(res.glissement).replace('+', '') : '';
   if (achat) {
-    pl.soldeEUR = Math.max(0, pl.soldeEUR - res.cout);
-    const a = pl.actifs[c.base] || (pl.actifs[c.base] = { qte: 0, cout: 0 });
-    a.qte += res.qteNette; a.cout += res.cout;
+    appliquerAchat(partie, c.base, res.qteNette, res.cout);
     journal(partie, 'achat', `Achat de ${qte(res.qteNette)} ${c.base} à ${prix(res.prixMoyen)} € (${eur(res.cout)}${res.frais ? ', frais ' + qte(res.frais) + ' ' + c.base : ''})`);
     toast(`Achat exécuté : ${qte(res.qteNette)} ${c.base} à ${prix(res.prixMoyen)} €${glisse}`, 'ok');
   } else {
-    const a = pl.actifs[c.base];
-    const part = Math.min(1, res.quantite / a.qte);
-    const coutPart = a.cout * part;
-    a.qte -= res.quantite; a.cout -= coutPart;
-    if (a.qte <= 1e-12) delete pl.actifs[c.base];
-    pl.soldeEUR += res.recuNet;
-    (partie.cessions || (partie.cessions = [])).push({ t: Date.now(), base: c.base, quantite: res.quantite, recu: res.recuNet, cout: coutPart });
-    const pv = res.recuNet - coutPart;
+    const pv = appliquerVente(partie, c.base, res.quantite, res.recuNet);
     journal(partie, 'vente', `Vente de ${qte(res.quantite)} ${c.base} à ${prix(res.prixMoyen)} € (${eur(res.recuNet)} reçus, ${pv >= 0 ? 'plus' : 'moins'}-value ${eur(Math.abs(pv))})`);
     toast(`Vente exécutée : ${eur(res.recuNet)} reçus${glisse}`, 'ok');
   }
-  app.saisie = { montant: '', quantite: '' };
+  app.saisie = saisieVide();
   sauver(partie);
   rendre();
+}
+
+async function placerOrdreEnAttente(c) {
+  const s = app.saisie;
+  const params = {
+    s: c.s, base: c.base, sens: app.sens, type: app.typeOrdre, qte: nombre(s.quantite),
+    prix: nombre(s.prix), stop: nombre(s.stop), limiteStop: nombre(s.limiteStop), maintenant: Date.now()
+  };
+  if (!(params.qte > 0)) return toast('Indique une quantité de ' + c.base + '.', 'erreur');
+  app.enCours = true; rendre();
+  let res;
+  try {
+    const [regles, marche] = await Promise.all([M.regles(c.s), M.meilleursPrix(c.s)]);
+    res = preparerOrdre(params, marche, regles);
+    if (!res.erreur) res = placerOrdre(partie, res.ordre);
+  } catch (e) {
+    res = { erreur: 'Impossible de joindre la plateforme. Vérifie ta connexion et réessaie.' };
+  }
+  app.enCours = false;
+  if (res.erreur) { rendre(); return toast(res.erreur, 'erreur'); }
+  const pl = partie.plateforme;
+  if (!pl.suiviJusqua || ordresDe(partie).length === 1) pl.suiviJusqua = res.ordre.creeLe;
+  app.saisie = saisieVide();
+  sauver(partie);
+  rendre();
+  toast('Ordre placé. Il s\'exécutera quand le marché réel atteindra ton prix.', 'ok');
+}
+
+// Bougie d'une minute en direct : on vérifie les ordres de cette paire.
+function surBougie(s, k) {
+  if (!partie || !ordresDe(partie).some(o => o.s === s)) return;
+  const evts = traiterPeriode(partie, s, { debut: k.t, fin: k.t + 60000, haut: k.h, bas: k.l, cloture: k.c }, difficulte().frais);
+  partie.plateforme.suiviJusqua = Math.max(partie.plateforme.suiviJusqua || 0, k.t);
+  if (evts.length) {
+    sauver(partie);
+    if (app.ecran === 'jeu') rendre();
+    toast(evts[evts.length - 1], 'ok');
+  }
+}
+
+// Rejoue le marché réel pendant l'absence ou une coupure du flux.
+let rattrapageEnCours = false;
+async function lancerRattrapage(retour) {
+  if (!partie || rattrapageEnCours || !ordresDe(partie).length) return;
+  rattrapageEnCours = true;
+  const depuis = partie.vuLe;
+  const r = await rattraper(partie, M, difficulte().frais);
+  rattrapageEnCours = false;
+  if (r.erreur || !r.evenements.length) { sauver(partie); return; }
+  partie.historique.sort((a, b) => b.t - a.t);
+  sauver(partie);
+  if (retour && depuis) app.absence = { duree: duree(Date.now() - depuis), evenements: r.evenements };
+  else toast(r.evenements[r.evenements.length - 1], 'ok');
+  if (app.ecran === 'jeu') rendre();
 }
 
 function virer() {
@@ -213,6 +266,8 @@ function exporter() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+
+function texteNombre(n, dec) { return String(Math.floor(n * 10 ** dec) / 10 ** dec).replace('.', ','); }
 
 // ---------- Actions ----------
 
@@ -241,21 +296,43 @@ const actions = {
     effacer();
     partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital });
     sauver(partie);
-    app.onglet = 'accueil'; app.crypto = null; app.graph = null;
+    app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
   onglet: v => { app.onglet = v; app.crypto = null; rendre(); window.scrollTo(0, 0); },
-  crypto: s => { if (!s) return; app.onglet = 'marche'; app.crypto = s; app.saisie = { montant: '', quantite: '' }; rendre(); window.scrollTo(0, 0); },
+  crypto: s => { if (!s) return; app.onglet = 'marche'; app.crypto = s; app.saisie = saisieVide(); rendre(); window.scrollTo(0, 0); },
   liste: () => { app.crypto = null; rendre(); },
   intervalle: v => { app.intervalle = v; rendre(); },
   sens: v => { app.sens = v; rendre(); },
+  'type-ordre': v => {
+    app.typeOrdre = v;
+    // Pré-remplit les prix avec le cours actuel pour gagner du temps.
+    const t = M.ticker(app.crypto);
+    if (t && v !== 'marche') {
+      const p = prix(t.c).replace(/\s/g, '');
+      if (!app.saisie.prix) app.saisie.prix = p;
+      if (!app.saisie.stop) app.saisie.stop = p;
+      if (!app.saisie.limiteStop) app.saisie.limiteStop = p;
+    }
+    rendre();
+  },
   part: v => {
     const pl = partie.plateforme, c = cryptoActive();
-    if (app.sens === 'achat') app.saisie.montant = String(Math.floor(pl.soldeEUR * v) / 100).replace('.', ',');
-    else { const q = (pl.actifs[c.base]?.qte || 0) * v / 100; app.saisie.quantite = String(Math.floor(q * 1e8) / 1e8).replace('.', ','); }
+    if (app.typeOrdre === 'marche' && app.sens === 'achat') app.saisie.montant = texteNombre(pl.soldeEUR * v / 100, 2);
+    else if (app.sens === 'vente') app.saisie.quantite = texteNombre((pl.actifs[c.base]?.qte || 0) * v / 100, 8);
+    else {
+      const s = app.saisie;
+      const parUnite = reserveAchat({ qte: 1, prix: app.typeOrdre === 'stop' ? 0 : nombre(s.prix), limiteStop: app.typeOrdre === 'limite' ? 0 : nombre(s.limiteStop) });
+      if (!parUnite) return toast('Indique d\'abord le prix.', 'erreur');
+      app.saisie.quantite = texteNombre(pl.soldeEUR * v / 100 / parUnite, 8);
+    }
     rendre();
   },
   ordre: () => passerOrdre(),
+  'annuler-ordre': id => {
+    if (annulerOrdre(partie, id)) { sauver(partie); rendre(); toast('Ordre annulé, fonds débloqués.', 'ok'); }
+  },
+  'fermer-absence': () => { app.absence = null; rendre(); },
   kyc: () => { demarrerKyc(partie); sauver(partie); rendre(); },
   'vir-sens': v => { app.virement.sens = v; rendre(); },
   virer: () => virer(),
@@ -285,16 +362,30 @@ document.addEventListener('input', ev => {
     if (t) t.textContent = eur(app.brouillon.capital);
     racine.querySelectorAll('[data-action="capital"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === app.brouillon.capital)));
   }
-  else if (k === 'montant' || k === 'quantite') { app.saisie[k] = el.value; majLive(); }
+  else if (k in app.saisie) { app.saisie[k] = el.value; majLive(); }
   else if (k === 'virement') app.virement.montant = el.value;
 });
 
 // ---------- Démarrage ----------
 
-M.ecouter((type, symbole) => {
+let etaitDirect = false;
+M.ecouter((type, symbole, donnees) => {
   if (type === 'tick') { planifierMaj(); if (symbole === app.crypto) { majBougie(symbole); planifierDessin(); } }
-  else if (type === 'statut') planifierMaj();
+  else if (type === 'bougie') surBougie(symbole, donnees);
+  else if (type === 'statut') {
+    planifierMaj();
+    const direct = M.etat.statut === 'direct';
+    if (direct && !etaitDirect) lancerRattrapage(false); // reconnexion : on comble le trou
+    etaitDirect = direct;
+  }
   else if (type === 'liste' && app.ecran === 'jeu' && app.onglet === 'marche' && !app.crypto) rendre();
+});
+
+function marquerVu() { if (partie) { partie.vuLe = Date.now(); sauver(partie); } }
+setInterval(marquerVu, 30000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') marquerVu();
+  else lancerRattrapage(true).then(marquerVu);
 });
 
 setInterval(() => {
@@ -309,6 +400,7 @@ setInterval(() => {
 if (partie) verifierKyc(partie) && sauver(partie);
 rendre();
 M.demarrer();
+lancerRattrapage(true).then(marquerVu);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

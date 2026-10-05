@@ -2,6 +2,7 @@
 import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VERSION } from './config.js';
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
+import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -82,6 +83,18 @@ function estimation(ctx) {
   const t = c && M.ticker(c.s);
   if (!t) return '';
   const d = DIFFICULTES[partie.difficulte];
+  const sx = app.saisie;
+  if (app.typeOrdre !== 'marche') {
+    const q = nombre(sx.quantite), p = nombre(sx.prix), st = nombre(sx.limiteStop);
+    if (!q) return 'Indique une quantité de ' + c.base + '.';
+    if (app.sens === 'achat') {
+      const bloque = reserveAchat({ qte: q, prix: app.typeOrdre === 'stop' ? 0 : p, limiteStop: app.typeOrdre === 'limite' ? 0 : st });
+      return bloque ? 'Bloque ' + eur(bloque) + ' jusqu\'à l\'exécution ou l\'annulation' : '';
+    }
+    if (app.typeOrdre === 'limite') return p ? 'Recevrait ≈ ' + eur(q * p * (1 - d.frais)) : '';
+    if (app.typeOrdre === 'stop') return st ? 'Recevrait ≈ ' + eur(q * st * (1 - d.frais)) + ' si le stop se déclenche' : '';
+    return p && st ? '≈ ' + eur(q * p * (1 - d.frais)) + ' à la limite, ≈ ' + eur(q * st * (1 - d.frais)) + ' au stop' : '';
+  }
   if (app.sens === 'achat') {
     const m = nombre(app.saisie.montant);
     if (!m) return 'Indique un montant en euros.';
@@ -267,7 +280,7 @@ function ongletAccueil(ctx) {
   ];
   const guide = d.aides && etapes.some(x => !x[1]);
   const actifs = Object.entries(pl.actifs);
-  return `<section class="carte" style="border-radius:20px">
+  return `${carteAbsence(ctx)}<section class="carte" style="border-radius:20px">
       <span class="discret" style="font-size:13px">Patrimoine total</span>
       ${live('patrimoine', ctx, 'gros-chiffre')}
       <span class="num" style="font-size:13px">${live('perf', ctx)} <span class="discret">depuis le départ</span></span>
@@ -291,8 +304,9 @@ function ongletAccueil(ctx) {
               <span class="g"><span class="t">${e(c ? c.nom : base)}</span><span class="s num">${qte(a.qte)} ${e(base)}</span></span></span>
             <span class="d"><span class="num" style="font-size:14px">${live('val:' + base, ctx)}</span><span class="num" style="font-size:12px">${live('pv:' + base, ctx)}</span></span>
           </button>`;
-        }).join('')}</div>` : `<div class="carte vide">Tu ne possèdes encore aucune crypto.</div>`}
+        }).join('')}</div>` : `<div class="carte vide">Tu ne possèdes encore aucune crypto${(pl.ordres || []).length ? ' disponible (le reste est bloqué dans tes ordres)' : ''}.</div>`}
     </section>
+    ${ordresOuverts(ctx)}
     ${journalHtml(partie, 6)}`;
 }
 
@@ -361,21 +375,64 @@ function detailCrypto(ctx) {
         <button class="vente" data-action="sens" data-v="vente" aria-pressed="${!achat}">Vendre</button>
       </div>
       <div class="segment">
-        <button aria-pressed="true">Au marché</button>
-        <button disabled>Limite · v0.2</button>
-        <button disabled>Stop · v0.2</button>
+        ${TYPES_UI.map(([id, nom]) => `<button data-action="type-ordre" data-v="${id}" aria-pressed="${app.typeOrdre === id}">${nom}</button>`).join('')}
       </div>
-      ${achat ? `<label class="champ">Montant à dépenser (€)
-          <input id="f-montant" class="num" inputmode="decimal" placeholder="0,00" value="${e(app.saisie.montant)}" data-input="montant" autocomplete="off"></label>
-        <div class="ligne-kv" style="font-size:13px"><span>Disponible</span><span class="num">${eur(pl.soldeEUR)}</span></div>`
-      : `<label class="champ">Quantité à vendre (${e(c.base)})
-          <input id="f-quantite" class="num" inputmode="decimal" placeholder="0" value="${e(app.saisie.quantite)}" data-input="quantite" autocomplete="off"></label>
-        <div class="ligne-kv" style="font-size:13px"><span>Disponible</span><span class="num">${a ? qte(a.qte) : '0'} ${e(c.base)}</span></div>`}
+      ${champsOrdre(app, c, a, pl, achat)}
       <div class="puces">${[25, 50, 75, 100].map(v => `<button class="puce" data-action="part" data-v="${v}">${v} %</button>`).join('')}</div>
       <div class="num" style="font-size:13px;color:var(--texte-2);min-height:18px">${live('estim', ctx)}</div>
-      <button class="bouton ${achat ? 'achat' : 'vente'}" data-action="ordre" ${app.enCours ? 'disabled' : ''}>${app.enCours ? 'Envoi de l\'ordre…' : (achat ? 'Acheter ' : 'Vendre ') + e(c.base)}</button>
-      <p class="discret" style="font-size:12px">${modeTxt} Frais : ${d.frais ? String(d.frais * 100).replace('.', ',') + ' %' : 'aucun'}.</p>`}
-    </section>`;
+      <button class="bouton ${achat ? 'achat' : 'vente'}" data-action="ordre" ${app.enCours ? 'disabled' : ''}>${app.enCours ? 'Envoi de l\'ordre…' : app.typeOrdre === 'marche' ? (achat ? 'Acheter ' : 'Vendre ') + e(c.base) : 'Placer l\'ordre ' + (achat ? "d'achat" : 'de vente')}</button>
+      <p class="discret" style="font-size:12px">${app.typeOrdre === 'marche' ? modeTxt : AIDES_TYPE[app.typeOrdre]} Frais : ${d.frais ? String(d.frais * 100).replace('.', ',') + ' %' : 'aucun'}.</p>`}
+    </section>
+    ${ordresOuverts(ctx, c.s)}`;
+}
+
+const TYPES_UI = [['marche', 'Marché'], ['limite', 'Limite'], ['stop', 'Stop'], ['oco', 'OCO']];
+const AIDES_TYPE = {
+  limite: "S'exécute seulement si le prix réel traverse ton prix limite.",
+  stop: 'Quand le prix atteint le déclenchement, un ordre limite est placé à ton prix limite.',
+  oco: "Deux ordres liés : un limite et un stop-limit. Dès que l'un s'exécute, l'autre est annulé."
+};
+
+function champ(id, label, cle, app, ph = '0,00') {
+  return `<label class="champ">${label}<input id="f-${id}" class="num" inputmode="decimal" placeholder="${ph}" value="${e(app.saisie[cle])}" data-input="${cle}" autocomplete="off"></label>`;
+}
+
+function champsOrdre(app, c, a, pl, achat) {
+  const dispo = achat
+    ? `<div class="ligne-kv" style="font-size:13px"><span>Disponible</span><span class="num">${eur(pl.soldeEUR)}</span></div>`
+    : `<div class="ligne-kv" style="font-size:13px"><span>Disponible</span><span class="num">${a ? qte(a.qte) : '0'} ${e(c.base)}</span></div>`;
+  const t = app.typeOrdre;
+  if (t === 'marche') {
+    return (achat ? champ('montant', 'Montant à dépenser (€)', 'montant', app) : champ('quantite', 'Quantité à vendre (' + e(c.base) + ')', 'quantite', app, '0')) + dispo;
+  }
+  const qteChamp = champ('quantite', 'Quantité (' + e(c.base) + ')', 'quantite', app, '0');
+  if (t === 'limite') return `<div class="grille-2">${champ('prix', 'Prix limite (€)', 'prix', app)}${qteChamp}</div>${dispo}`;
+  if (t === 'stop') return `<div class="grille-2">${champ('stop', 'Déclenchement (€)', 'stop', app)}${champ('limiteStop', 'Prix limite (€)', 'limiteStop', app)}</div>${qteChamp}${dispo}`;
+  return `${champ('prix', 'Prix limite (€)', 'prix', app)}
+    <div class="grille-2">${champ('stop', 'Déclenchement du stop (€)', 'stop', app)}${champ('limiteStop', 'Limite du stop (€)', 'limiteStop', app)}</div>${qteChamp}${dispo}`;
+}
+
+function ordresOuverts(ctx, s) {
+  const liste = (ctx.partie.plateforme.ordres || []).filter(o => !s || o.s === s);
+  if (!liste.length) return '';
+  return `<section class="section"><div class="section-titre"><h2>Ordres en attente</h2><span class="discret" style="font-size:12px">${liste.length}</span></div>
+    <div class="carte liste-lignes" style="padding:0 16px;gap:0">
+      ${liste.map(o => `<div class="rangee">
+        <span class="g"><span class="t" style="font-size:14px"><span class="${o.sens === 'achat' ? 'hausse' : 'baisse'}">${o.sens === 'achat' ? 'Achat' : 'Vente'}</span> · ${TYPES[o.type]}${o.declenche ? ' · stop déclenché' : ''}</span>
+          <span class="s num">${e(descriptionOrdre(o, prix, qte))}</span></span>
+        <button class="bouton secondaire petit" style="min-height:36px;padding:0 12px;font-size:13px" data-action="annuler-ordre" data-v="${o.id}">Annuler</button>
+      </div>`).join('')}
+    </div></section>`;
+}
+
+function carteAbsence(ctx) {
+  const a = ctx.app.absence;
+  if (!a) return '';
+  return `<section class="carte info">
+    <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Pendant ton absence</span><span class="discret" style="font-size:12px">${e(a.duree)}</span></div>
+    ${a.evenements.slice(0, 8).map(t => `<div class="effet"><span class="puce-pt"></span><span>${e(t)}</span></div>`).join('')}
+    <button class="bouton petit" data-action="fermer-absence">Compris</button>
+  </section>`;
 }
 
 function ongletFinances(ctx) {
@@ -392,7 +449,9 @@ function ongletFinances(ctx) {
       <div class="ligne-kv"><span>Temps restant</span>${live('kyc', ctx, 'num')}</div>
       <p class="discret" style="font-size:12px">Délai réel d'environ 20 minutes, divisé par la vitesse du temps de ta difficulté.</p>`;
   } else {
-    carteP = `<div class="ligne-kv"><span>Solde en euros</span><span class="num" style="font-size:18px;color:var(--texte)">${eur(pl.soldeEUR)}</span></div>
+    const bloque = (pl.ordres || []).reduce((s, o) => s + (o.reserve.eur || 0), 0);
+    carteP = `<div class="ligne-kv"><span>Euros disponibles</span><span class="num" style="font-size:18px;color:var(--texte)">${eur(pl.soldeEUR)}</span></div>
+      ${bloque ? `<div class="ligne-kv"><span>Bloqués dans des ordres</span><span class="num">${eur(bloque)}</span></div>` : ''}
       <div class="ligne-kv"><span>Cryptos</span>${live('actifs', ctx, 'num')}</div>`;
   }
   return `<h1 style="font-size:24px;font-weight:800">Finances</h1>

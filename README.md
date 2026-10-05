@@ -1,9 +1,9 @@
-# Simulateur crypto — V0.1
+# Simulateur crypto — V0.2
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
 
-## Contenu de la V0.1
+## Contenu actuel
 
 - Écran de lancement : continuer la partie ou en commencer une nouvelle (une seule sauvegarde).
 - Création du profil : prénom, nom, âge, ville, situation (sans emploi, étudiant, alternant, salarié), métier, logement, mode de vie.
@@ -13,6 +13,8 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Ordres au marché : exécutés sur le vrai carnet d'ordres en Expert et Réalité (glissement réel), au meilleur prix en Investisseur, au prix moyen en Découverte. Frais réels (0,1 %), pas de quantité et montant minimum réels de chaque paire.
 - Suivi : patrimoine total, position par crypto, prix de revient moyen, plus-value latente, journal.
 - Sauvegarde locale sur le téléphone, export de la sauvegarde.
+- Ordres en attente (V0.2) : limite, stop-limit et OCO, avec fonds bloqués et annulation. Un ordre limite ne s'exécute que si le prix réel traverse son prix.
+- Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
 
@@ -55,7 +57,10 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `css/app.css` | Style (thème sombre des maquettes) |
 | `js/config.js` | Difficultés, cryptos, profils, métiers |
 | `js/market.js` | Connexion au marché réel (WebSocket et REST) |
-| `js/engine.js` | Exécution des ordres (fonctions pures, testées) |
+| `js/engine.js` | Exécution des ordres au marché (fonctions pures, testées) |
+| `js/orders.js` | Règles des ordres limite, stop-limit et OCO (testées) |
+| `js/portefeuille.js` | Mouvements du compte : réservations, exécutions, annulations |
+| `js/suivi.js` | Suivi des ordres en direct et rattrapage hors ligne |
 | `js/state.js` | Sauvegarde locale et règles de la partie |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
@@ -64,12 +69,15 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.2 Ordres limite, stop et OCO, rattrapage hors ligne.
-2. V0.3 Minage Bitcoin : ASIC, pools, gains bloc par bloc, électricité.
-3. V0.4 Gestion du parc : chaleur, bruit, pannes, entretien.
-4. V0.5 Rigs GPU et autres cryptos minables.
-5. V0.6 Installations : hébergeurs, local pro, triphasé.
-6. V0.7 Dérivés avec levier.
-7. V0.8 Fiscalité.
-8. V0.9 Vie quotidienne, métiers complets et date de départ libre.
-9. V1.0 Notifications et synchro entre appareils.
+1. V0.3 Minage Bitcoin : ASIC, pools, gains bloc par bloc, électricité.
+2. V0.4 Gestion du parc : chaleur, bruit, pannes, entretien.
+3. V0.5 Rigs GPU et autres cryptos minables.
+4. V0.6 Installations : hébergeurs, local pro, triphasé.
+5. V0.7 Dérivés avec levier.
+6. V0.8 Fiscalité.
+7. V0.9 Vie quotidienne, métiers complets et date de départ libre.
+8. V1.0 Notifications et synchro entre appareils.
+
+## Décisions
+
+Les choix faits pendant le développement sont listés dans `DECISIONS.md`.
