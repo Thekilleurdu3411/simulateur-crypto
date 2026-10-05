@@ -4,6 +4,7 @@ import { evaluer, descriptionOrdre } from './orders.js';
 import { executerOrdre, ordresDe } from './portefeuille.js';
 import { journal } from './state.js';
 import { prix as fp, qte as fq } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 const JOUR = 864e5;
 
@@ -19,13 +20,13 @@ export function traiterPeriode(partie, s, periode, tauxFrais) {
     const avant = o.declenche;
     const r = evaluer(o, { haut: periode.haut, bas: periode.bas, cloture: periode.cloture, partielle });
     if (o.declenche && !avant) {
-      o.declencheLe = Math.max(periode.debut + 1, Math.min(Date.now(), periode.fin - 1));
+      o.declencheLe = Math.max(periode.debut + 1, Math.min(tJeu(), periode.fin - 1));
       const t = 'Stop déclenché : ' + descriptionOrdre(o, fp, fq);
       journal(partie, 'ordre', t);
       evts.push(t);
     }
     if (r && r.execute) {
-      const t = Math.min(Date.now(), periode.fin - 1);
+      const t = Math.min(tJeu(), periode.fin - 1);
       evts.push(executerOrdre(partie, o, r.prix, tauxFrais, t));
     }
   }
@@ -36,7 +37,7 @@ export function traiterPeriode(partie, s, periode, tauxFrais) {
 export async function rattraper(partie, marche, tauxFrais) {
   const ordres = ordresDe(partie);
   const pl = partie.plateforme;
-  const maintenant = Date.now();
+  const maintenant = tJeu();
   if (!ordres.length) { pl.suiviJusqua = maintenant; return { evenements: [] }; }
   const depuis = Math.max(pl.suiviJusqua || 0, Math.min(...ordres.map(o => o.creeLe)));
   if (maintenant - depuis < 60000) return { evenements: [] };

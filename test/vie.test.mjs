@@ -38,3 +38,11 @@ test('étudiant : job de 10 h par semaine au SMIC ; sans emploi : rien', () => {
   assert.ok(Math.abs(salaireNet({ situation: 'etudiant' }) - SMIC.net * 10 / 35) < 1e-9);
   assert.equal(salaireNet({ situation: 'sans' }), 0);
 });
+
+test('tranche d\'imposition selon le salaire', async () => {
+  const { tmi } = await import('../js/vie.js');
+  assert.equal(tmi({ situation: 'salarie', metier: 'Électricien', experience: 'debutant' }), 0.11);
+  assert.equal(tmi({ situation: 'salarie', metier: 'Développeur', experience: 'confirme' }), 0.30);
+  assert.equal(tmi({ situation: 'alternant', age: 20, anneeApprentissage: 1 }), 0);
+  assert.equal(tmi({ situation: 'sans' }), 0);
+});

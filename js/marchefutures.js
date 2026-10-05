@@ -1,5 +1,6 @@
 // Données réelles des contrats perpétuels (Binance Futures, accès public sans compte).
 import { CONTRATS } from './futures.js';
+import { enRejeu } from './horloge.js';
 
 const FAPI = 'https://fapi.binance.com';
 const WS = 'wss://fstream.binance.com/market/stream?streams=';
@@ -45,6 +46,7 @@ function planifier() { if (actif) setTimeout(connecter, Math.min(30000, 1000 * 2
 
 // Ne se connecte qu'à la première visite des perpétuels (pas de flux inutile).
 export function demarrer() {
+  if (enRejeu()) return;
   if (actif) return;
   actif = true;
   chargerMarques().catch(() => {});

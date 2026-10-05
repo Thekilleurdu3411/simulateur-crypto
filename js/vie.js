@@ -149,3 +149,21 @@ export function avancerVie(vie, banque, profil, t0, t1, periode, kva) {
   }
   return evts;
 }
+
+// Barème de l'impôt sur le revenu (revenus 2025, loi de finances 2026), une part.
+export const BAREME_IR = [[11600, 0], [29579, 0.11], [84577, 0.30], [181917, 0.41], [Infinity, 0.45]];
+export const ABATTEMENT_FRAIS_PRO = 0.10;
+
+/** Revenu imposable annuel tiré du salaire (apprentis et jobs étudiants exonérés jusqu'au SMIC annuel). */
+export function revenuImposable(profil) {
+  const annuel = salaireNet(profil) * 12;
+  const exonere = profil.situation === 'alternant' || profil.situation === 'etudiant' ? SMIC.brut * 12 : 0;
+  return Math.max(0, annuel - exonere) * (1 - ABATTEMENT_FRAIS_PRO);
+}
+
+/** Tranche marginale d'imposition d'une personne seule. */
+export function tmi(profil) {
+  const r = revenuImposable(profil);
+  for (const [plafond, taux] of BAREME_IR) if (r <= plafond) return taux;
+  return 0.45;
+}

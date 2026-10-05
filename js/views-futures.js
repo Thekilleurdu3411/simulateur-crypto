@@ -3,6 +3,7 @@ import { DIFFICULTES, reglesDe } from './config.js';
 import { CONTRATS, contrat, prixLiquidation, FRAIS_PRENEUR, pnl, risque } from './futures.js';
 import { futuresDe } from './jeufutures.js';
 import { eur, duree, echapper as e } from './format.js';
+import { maintenant as tJeu, enRejeu } from './horloge.js';
 
 const u = v => (v == null || !isFinite(v)) ? '—' : v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
 const px = v => (v == null || !isFinite(v)) ? '—' : v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -13,7 +14,7 @@ export function valeurFutures(k, arg, ctx) {
   const f = ctx.partie.futures;
   switch (k) {
     case 'fm': return { t: m[arg] ? px(m[arg].p) : '—' };
-    case 'ff': return m[arg] ? { t: (m[arg].r * 100).toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' % · dans ' + duree(m[arg].T - Date.now()), cls: m[arg].r >= 0 ? '' : 'hausse' } : { t: '—' };
+    case 'ff': return m[arg] ? { t: (m[arg].r * 100).toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' % · dans ' + duree(m[arg].T - tJeu()), cls: m[arg].r >= 0 ? '' : 'hausse' } : { t: '—' };
     case 'fp': {
       const pos = f && f.positions.find(x => x.id === arg);
       if (!pos || !m[pos.s]) return { t: '—' };
@@ -36,6 +37,7 @@ export function valeurFutures(k, arg, ctx) {
 export function ongletPerp(ctx, live) {
   const { partie, app, D } = ctx;
   const d = reglesDe(partie);
+  if (enRejeu()) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Perpétuels indisponibles en rejeu pour l'instant : le carnet et le prix de marque passés ne sont pas encore rejoués.</div>`;
   if (!d.levierMax) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Les dérivés avec levier sont désactivés dans ta partie (Découverte, ou levier à zéro dans les réglages avancés).</div>`;
   if (partie.plateforme.statut !== 'ouvert') return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Ouvre d'abord un compte sur la plateforme (onglet Finances).</div>`;
   const f = futuresDe(partie);

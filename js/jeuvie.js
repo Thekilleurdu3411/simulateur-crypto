@@ -3,16 +3,17 @@ import { DIFFICULTES, reglesDe } from './config.js';
 import { avancerVie, MOIS, trouverMetier } from './vie.js';
 import { COMPTEUR } from './minage.js';
 import { journal } from './state.js';
+import { maintenant as tJeu } from './horloge.js';
 
 export function periode(partie) { return MOIS / reglesDe(partie).temps; }
 
 export function vieDe(partie) {
-  if (!partie.vie) partie.vie = { prochaineEcheance: Date.now() + periode(partie) };
-  if (!partie.vie.dernierCalcul) partie.vie.dernierCalcul = Date.now();
+  if (!partie.vie) partie.vie = { prochaineEcheance: tJeu() + periode(partie) };
+  if (!partie.vie.dernierCalcul) partie.vie.dernierCalcul = tJeu();
   return partie.vie;
 }
 
-export function avancerViePartie(partie, maintenant = Date.now()) {
+export function avancerViePartie(partie, maintenant = tJeu()) {
   const v = vieDe(partie);
   const kva = partie.minage ? partie.minage.contrat.kva : (COMPTEUR[partie.profil.logement] || 6);
   const evts = avancerVie(v, partie.banque, partie.profil, v.dernierCalcul, maintenant, periode(partie), kva);
@@ -31,7 +32,7 @@ export function changerSituation(partie, situation, metier, experience, anneeApp
   const delai = periode(partie);
   const libelle = situation === 'salarie' ? `${metier} (${experience === 'experimente' ? 'expérimenté' : experience === 'confirme' ? 'confirmé' : 'débutant'})`
     : situation === 'alternant' ? `alternance${metier ? ' (' + metier + ')' : ''}` : situation === 'etudiant' ? 'études' : 'sans emploi';
-  v.changement = { le: Date.now() + delai, profil: { situation, metier, experience, anneeApprentissage }, texte: situation === 'sans' ? 'Fin de ton préavis : tu es sans emploi.' : `Tu commences : ${libelle}.` };
+  v.changement = { le: tJeu() + delai, profil: { situation, metier, experience, anneeApprentissage }, texte: situation === 'sans' ? 'Fin de ton préavis : tu es sans emploi.' : `Tu commences : ${libelle}.` };
   journal(partie, 'vie', situation === 'sans' ? 'Démission envoyée : préavis d\'un mois.' : `Nouvelle situation trouvée : ${libelle}, début dans un mois.`);
   return { le: v.changement.le };
 }

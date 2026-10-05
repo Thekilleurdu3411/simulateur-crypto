@@ -163,3 +163,21 @@ Tout peut être changé : il suffit de le demander.
 | Changer de difficulté de base | Les réglages déjà modifiés sont gardés s'ils diffèrent encore de la nouvelle base | Évite de perdre ses réglages en changeant de difficulté. |
 | Score | Pas de coefficient de score pour une partie personnalisée : classement séparé | Un coefficient automatique serait arbitraire. **À valider.** |
 | Modifiable en cours de partie | Non : les réglages sont fixés au lancement | Garde les classements comparables. |
+
+## V0.11
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Date de départ libre | Le joueur choisit un jour passé ; la partie démarre ce jour-là à l'heure actuelle, puis le temps du jeu avance au rythme réel, décalé d'autant | Demande : choisir sa date de départ, le jeu charge les vraies valeurs du marché. |
+| Première date jouable | 5 janvier 2020 | Premières paires en euros (BTCEUR) sur la plateforme. Avant, il faudrait convertir les paires en dollars au cours euro-dollar de l'époque : **à valider** si tu veux remonter plus loin. |
+| Prix | Vraies bougies d'une minute de la date du jeu, chargées par blocs de 16 h ; prix interpolé entre l'ouverture et la clôture de la minute ; variations, haut, bas et volume sur les 24 h passées du jeu | Données réelles. L'interpolation révèle la direction de la minute en cours : avantage négligeable face aux frais. |
+| Ordres en attente | Vérifiés sur chaque bougie d'une minute terminée, comme en direct | Même règle partout. |
+| Carnet d'ordres | Reconstitué : écart de 0,02 % autour du prix, 100 niveaux de chaque côté, chacun du quarantième du volume de la minute (au moins 500 €) | Aucun historique public du carnet. **Estimation à valider.** |
+| Réseau Bitcoin | Difficulté, hauteur de bloc et frais moyens historiques (mempool.space) ; 0,1 BTC de frais par bloc si l'historique des frais ne remonte pas assez loin | Données réelles ; repli signalé. |
+| Machines | En vente seulement à partir de leur date de sortie (approximative) ; prix actuel × rapport du revenu d'un TH/s par jour en dollars entre la date du jeu et aujourd'hui, borné entre ×0,5 et ×10 | Le prix des ASIC suit la rentabilité du minage. Dates de sortie et méthode **à valider**. Les S19 restent « d'occasion » même en 2020, et aucune machine n'existe avant mai 2020 (S9 et S17 à ajouter). |
+| Météo, euro-dollar, Tempo | Archives Open-Meteo (ERA5), cours EUR/USDT et couleur Tempo de la date du jeu | Données réelles. |
+| Pas encore rejoués | Perpétuels, rigs de cartes graphiques, Antminer L9 (Litecoin et Dogecoin) | Pas d'historique public simple des réseaux concernés ; perpétuels à rejouer plus tard. |
+| Vie et électricité en rejeu | Salaires, loyers et tarifs d'électricité de 2026 | Historiques à ajouter ; **à valider**. |
+| Flat tax | 30 % pour les revenus jusqu'à 2024, 31,4 % à partir de 2025 | Hausse de la CSG sur les revenus du patrimoine. |
+| Tranche d'imposition du minage | Calculée à partir du salaire (barème des revenus 2025, abattement de 10 %, apprentis et jobs étudiants exonérés jusqu'au SMIC annuel), au lieu d'une valeur supposée | Les revenus existent depuis la V0.9. |
+| Mode rejeu accéléré | Pas encore : le marché rejoue au rythme réel | Le « mode bonus » accéléré viendra ensuite. **À préciser avec toi.** |

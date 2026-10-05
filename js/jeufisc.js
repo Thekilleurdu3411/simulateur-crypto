@@ -3,6 +3,7 @@ import { reglesDe } from './config.js';
 import { fiscDe, acquisition, cession, bilan, calendrier, redressement } from './fiscalite.js';
 import { journal } from './state.js';
 import { eur } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 // Valeur de tous les actifs numériques du joueur (fournie par l'appli, qui connaît les prix).
 let evaluateur = () => 0;
@@ -13,17 +14,17 @@ export function mode(partie) {
   return reglesDe(partie).impots || 'auto';
 }
 
-export function noterAchat(partie, eurDepense, t = Date.now()) {
+export function noterAchat(partie, eurDepense, t = tJeu()) {
   if (mode(partie) === 'off') return;
   acquisition(fiscDe(partie), eurDepense, t);
 }
-export function noterMinage(partie, valeur, t = Date.now()) {
+export function noterMinage(partie, valeur, t = tJeu()) {
   if (mode(partie) === 'off' || !(valeur > 0)) return;
   acquisition(fiscDe(partie), valeur, t, 'minage');
 }
 
 /** À appeler APRÈS la cession : la valeur globale d'avant = valeur restante + euros reçus. */
-export function noterCession(partie, prix, t = Date.now()) {
+export function noterCession(partie, prix, t = tJeu()) {
   if (mode(partie) === 'off') return null;
   const f = fiscDe(partie);
   const pv = cession(f, prix, evaluateur(partie) + prix, t);
@@ -34,7 +35,7 @@ export function noterCession(partie, prix, t = Date.now()) {
 // Investisseur : la flat tax de l'année est ajustée à chaque cession (prélevée ou rendue sur la banque).
 function prelever(partie, an) {
   const f = fiscDe(partie);
-  const b = bilan(f, an, partie.profil.situation);
+  const b = bilan(f, an, partie.profil);
   const deja = f.preleve[an] || 0;
   const delta = Math.round((b.impotPV - deja) * 100) / 100;
   if (Math.abs(delta) < 0.01) return;
@@ -49,7 +50,7 @@ function anneesActives(f) {
 }
 
 /** Ouvre les déclarations, applique les échéances et les paiements. Renvoie les événements. */
-export function echeances(partie, maintenant = Date.now()) {
+export function echeances(partie, maintenant = tJeu()) {
   if (mode(partie) === 'off' || !partie.fisc) return [];
   const f = partie.fisc;
   const m = mode(partie);
@@ -58,7 +59,7 @@ export function echeances(partie, maintenant = Date.now()) {
     if (an >= new Date(maintenant).getFullYear()) continue;
     const cal = calendrier(an);
     const d = f.declarations[an] || (f.declarations[an] = { statut: 'a-venir' });
-    const reel = bilan(f, an, partie.profil.situation);
+    const reel = bilan(f, an, partie.profil);
     if (d.statut === 'a-venir' && maintenant >= cal.ouverture) {
       if (m === 'manuel') { d.statut = 'ouverte'; evts.push(`Déclaration des revenus ${an} ouverte : remplis-la avant le ${new Date(cal.limite).toLocaleDateString('fr-FR')}.`); }
       else { d.statut = 'deposee'; d.declare = { pv: reel.pvNette, recettes: reel.recettesMinage }; evts.push(`Déclaration des revenus ${an} remplie automatiquement : ${eur(reel.total)} d'impôt.`); }
@@ -66,7 +67,7 @@ export function echeances(partie, maintenant = Date.now()) {
     if (d.statut === 'ouverte' && maintenant > cal.limite) { d.statut = 'retard'; evts.push(`Date limite dépassée pour ta déclaration ${an} : majoration de 10 %.`); }
     if (['deposee', 'retard', 'ouverte'].includes(d.statut) && maintenant >= cal.paiement) {
       const mois = Math.round((cal.paiement - cal.limite) / (30 * 864e5));
-      const r = m === 'manuel' ? redressement(reel, d.statut === 'retard' && !d.declare ? null : d.declare, partie.profil.situation, mois) : { du: reel.total, motif: null };
+      const r = m === 'manuel' ? redressement(reel, d.statut === 'retard' && !d.declare ? null : d.declare, partie.profil, mois) : { du: reel.total, motif: null };
       const deja = f.preleve[an] || 0;
       const reste = Math.round((r.du - deja) * 100) / 100;
       partie.banque.solde -= reste;

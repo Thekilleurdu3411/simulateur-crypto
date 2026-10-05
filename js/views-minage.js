@@ -1,10 +1,12 @@
 // Onglet Minage : parc, pool, contrat électrique, réseau réel, boutique.
 import { HEBERGEURS, ABONNEMENTS, CHANGEMENT_PUISSANCE, ENVOI, FRAIS_ANNEXES_USD, hebergeur, prixHebergeurEUR } from './minage.js';
-import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
+import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur, disponible, marcheMachines } from './minage.js';
+import { enRejeu } from './horloge.js';
 import { DIFFICULTES, reglesDe } from './config.js';
 import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
 import { CARTES, COINS_GPU, RIG, FRAIS_POOL_ALT, calculerRig, coinsParSeconde, prixAltEUR } from './altcoins.js';
 import { eur, prix, qte, dateHeure, echapper as e } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 const LOGEMENT = { parents: 'Chez tes parents', appart: 'Appartement', maison: 'Maison avec garage' };
 const COULEUR_TXT = { bleu: 'Jour bleu', blanc: 'Jour blanc', rouge: 'Jour rouge' };
@@ -123,7 +125,7 @@ function salle(ctx, mn) {
   const { partie, D } = ctx;
   const garage = partie.profil.logement === 'maison';
   const T = mn.temperature;
-  const ext = D.temperatureExterieure(Date.now());
+  const ext = D.temperatureExterieure(tJeu());
   const f = T != null ? facteurChaleur(T) : 1;
   const etatT = T == null ? '' : T > 40 ? 'badge ko' : T > 35 ? 'badge attente' : 'badge ok';
   return `<section class="carte">
@@ -158,11 +160,11 @@ function machineCarte(m, ctx, live) {
     </div>
     <div class="ligne-kv" style="font-size:12px"><span>Emplacement</span><span>${h ? e(h.nom) + ' · ' + e(h.pays) : m.statut === 'envoi' && m.envoiVers !== 'maison' ? 'en route vers ' + e(hebergeur(m.envoiVers).nom) : 'Chez toi'}</span></div>
     ${m.statut === 'envoi' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrivée prévue</span><span>${e(dateHeure(m.envoiFin))}</span></div>` : ''}
-    ${h && m.engagementFin ? `<div class="ligne-kv" style="font-size:12px"><span>Engagement</span><span>${Date.now() < m.engagementFin ? 'jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') : 'terminé'}</span></div>` : ''}
+    ${h && m.engagementFin ? `<div class="ligne-kv" style="font-size:12px"><span>Engagement</span><span>${tJeu() < m.engagementFin ? 'jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') : 'terminé'}</span></div>` : ''}
     ${m.statut === 'envoi' ? '' : m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>` : `
     <div class="ligne-kv" style="font-size:12px"><span>Fonctionnement</span><span class="num">${Math.round(m.heures || 0).toLocaleString('fr-FR')} h · nettoyée il y a ${Math.round(m.heuresDepuisNettoyage || 0)} h</span></div>
     ${(m.santeHash ?? 1) < 1 ? `<div class="ligne-kv" style="font-size:12px"><span>Cartes de hachage</span><span class="baisse">${Math.round((m.santeHash) * 3)} sur 3 en service</span></div>` : ''}
-    <div class="ligne-kv" style="font-size:12px"><span>Garantie</span><span>${m.garantieFin && Date.now() < m.garantieFin ? 'jusqu\'au ' + new Date(m.garantieFin).toLocaleDateString('fr-FR') : 'aucune'}</span></div>
+    <div class="ligne-kv" style="font-size:12px"><span>Garantie</span><span>${m.garantieFin && tJeu() < m.garantieFin ? 'jusqu\'au ' + new Date(m.garantieFin).toLocaleDateString('fr-FR') : 'aucune'}</span></div>
     ${md.rig && reglable ? `<div class="segment">${Object.keys(COINS_GPU).map(c => `<button data-action="rig-crypto" data-v="${m.id}:${c}" aria-pressed="${m.config.coin === c}">${c}</button>`).join('')}</div>` : ''}
     ${reglable ? `<div class="segment">${Object.entries(MODES).map(([id, x]) => `<button data-action="mode" data-v="${m.id}:${id}" aria-pressed="${mode === id}">${x.nom}</button>`).join('')}</div>` : ''}
     ${devis && m.statut !== 'reparation' ? `<div class="carte alerte" style="font-size:13px;padding:10px 12px;gap:6px"><strong>${e(devis.panne.nom)}</strong>
@@ -192,7 +194,8 @@ function boutique(ctx, mn) {
     <div class="section-titre" style="margin-top:6px"><h2>ASIC</h2></div>
     <div class="carte" style="gap:8px"><span style="font-size:13px">Livraison</span>
       <div class="puces">${[['maison', 'Chez toi'], ...HEBERGEURS.map(h => [h.id, h.nom])].map(([id, nom]) => `<button class="puce" data-action="lieu-achat" data-v="${id}" aria-pressed="${(ctx.app.lieuAchat || 'maison') === id}">${e(nom)}</button>`).join('')}</div></div>
-    ${CATALOGUE.map(m => {
+    ${enRejeu() ? `<p class="discret" style="font-size:12px">Rejeu : seules les machines déjà sorties à cette date sont en vente. Prix estimés d'après la rentabilité du minage de l'époque (×${n1(marcheMachines.facteur)} par rapport à aujourd'hui).</p>` : ''}
+    ${CATALOGUE.filter(m => disponible(m, tJeu()) && !(m.production && enRejeu())).map(m => {
       const px = eurUsd ? prixMachineEUR(m, eurUsd) : null;
       const est = d.aides ? estimer(m, ctx, mn) : null;
       const lieu = ctx.app.lieuAchat || 'maison';
@@ -270,6 +273,7 @@ export function ongletInstallations(ctx, live) {
 
 function constructeurRig(ctx, mn) {
   const { app, partie } = ctx;
+  if (enRejeu()) return `<div class="section-titre"><h2>Rig de cartes graphiques</h2></div><div class="carte info" style="font-size:13px;color:var(--texte-2)">Indisponible en rejeu : pas d'historique public des réseaux Ravencoin, Ethereum Classic et Ergo.</div>`;
   const d = reglesDe(partie);
   const b = app.rig;
   const r = calculerRig(b.carte, b.nb, b.coin);

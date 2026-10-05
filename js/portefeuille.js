@@ -4,6 +4,7 @@ import { journal } from './state.js';
 import { eur, prix as fp, qte as fq } from './format.js';
 import { descriptionOrdre } from './orders.js';
 import { noterAchat, noterCession } from './jeufisc.js';
+import { maintenant as tJeu } from './horloge.js';
 
 function actif(pl, base) { return pl.actifs[base] || (pl.actifs[base] = { qte: 0, cout: 0 }); }
 function nettoyer(pl, base) { const a = pl.actifs[base]; if (a && a.qte <= 1e-12) delete pl.actifs[base]; }
@@ -30,7 +31,7 @@ export function appliquerVente(partie, base, quantite, recuNet) {
   const coutPart = a.cout * part;
   a.qte -= quantite; a.cout -= coutPart;
   nettoyer(partie.plateforme, base);
-  return encaisserVente(partie, base, quantite, recuNet, coutPart, Date.now());
+  return encaisserVente(partie, base, quantite, recuNet, coutPart, tJeu());
 }
 
 /** Bloque les fonds d'un ordre et l'ajoute à la liste. Renvoie { erreur } ou { ordre }. */
@@ -49,7 +50,7 @@ export function placerOrdre(partie, o) {
     nettoyer(pl, o.base);
     o.reserve = { qte: o.qte, cout };
   }
-  o.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  o.id = tJeu().toString(36) + Math.random().toString(36).slice(2, 6);
   ordresDe(partie).push(o);
   journal(partie, 'ordre', 'Ordre placé : ' + descriptionOrdre(o, fp, fq));
   return { ordre: o };

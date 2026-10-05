@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.10
+# Simulateur crypto — V0.11
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -22,6 +22,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Fiscalité (V0.8) : méthode française du portefeuille global, seuil de 305 €, flat tax de 31,4 %, minage en micro-BNC, déclaration au printemps et paiement en septembre ; prélevée, automatique ou à remplir soi-même selon la difficulté.
 - Vie quotidienne (V0.9) : salaire selon le métier et l'expérience, grille des apprentis, job étudiant, loyer selon la ville et le logement, courses, forfaits et loisirs selon le mode de vie, découvert avec agios, changement de situation avec un mois de délai.
 - Réglages avancés (V0.10) : douze réglages libres avant de lancer la partie (vitesse du temps, minage, électricité, frais, pannes, levier, impôts…) ; au moindre changement, la partie devient « Personnalisée » avec son propre classement.
+- Date de départ libre (V0.11) : la partie peut commencer n'importe quel jour depuis le 5 janvier 2020 ; le marché rejoue les vraies bougies minute par minute, avec le réseau Bitcoin, la météo, l'euro-dollar et les jours Tempo de l'époque, et seules les machines déjà sorties.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -85,6 +86,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/state.js` | Sauvegarde locale et règles de la partie |
 | `js/vie.js`, `js/jeuvie.js`, `js/views-vie.js` | Vie quotidienne : salaires, loyers, dépenses (testés), écran |
 | `js/views-reglages.js` | Écran des réglages avancés |
+| `js/horloge.js` | Horloge du jeu (direct ou date passée) |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -92,7 +94,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. Date de départ libre et mode rejeu, métiers complets.
+1. Mode rejeu accéléré, perpétuels et autres cryptos en rejeu, métiers complets.
 2. V1.0 Notifications et synchro entre appareils.
 
 ## Décisions

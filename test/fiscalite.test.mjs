@@ -92,3 +92,11 @@ test('partie Investisseur : flat tax prélevée dès la vente', async () => {
   noterCession(partie, 2000, Date.parse('2026-11-10'));
   assert.ok(Math.abs(partie.banque.solde - (1000 - 314)) < 0.01);
 });
+
+test('flat tax de 30 % avant les revenus 2025', () => {
+  const f = fiscDe({});
+  acquisition(f, 1000, Date.parse('2021-01-10'));
+  cession(f, 1000, 2000, Date.parse('2021-02-10'));
+  const b = bilan(f, 2021, 'salarie');
+  assert.ok(Math.abs(b.impotPV - 500 * 0.30) < 1e-9);
+});

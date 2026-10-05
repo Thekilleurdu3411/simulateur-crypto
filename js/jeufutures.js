@@ -4,15 +4,17 @@ import { contrat, ouvrir, fermer, estLiquidee, financement, prochainFinancement,
 import { journal } from './state.js';
 import { noterAchat, noterCession } from './jeufisc.js';
 import { eur } from './format.js';
+import { maintenant as tJeu, enRejeu } from './horloge.js';
 
 const u = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
 
 export function futuresDe(partie) {
-  return partie.futures || (partie.futures = { soldeUSDT: 0, positions: [], suiviJusqua: Date.now(), resultats: [] });
+  return partie.futures || (partie.futures = { soldeUSDT: 0, positions: [], suiviJusqua: tJeu(), resultats: [] });
 }
 
 // Conversion euros ↔ USDT au cours réel EUR/USDT, 0,1 % de frais.
 export function transferer(partie, sens, montant, eurUsd) {
+  if (enRejeu()) return { erreur: 'Perpétuels indisponibles en rejeu.' };
   const f = futuresDe(partie), pl = partie.plateforme;
   if (!eurUsd) return { erreur: 'Cours EUR/USDT indisponible pour le moment.' };
   if (!(montant > 0)) return { erreur: 'Indique un montant.' };
@@ -33,16 +35,17 @@ export function transferer(partie, sens, montant, eurUsd) {
 }
 
 export function ouvrirPosition(partie, p, marche, regles) {
+  if (enRejeu()) return { erreur: 'Perpétuels indisponibles en rejeu.' };
   const f = futuresDe(partie);
   const d = reglesDe(partie);
   if (!d.levierMax) return { erreur: 'Les dérivés sont désactivés dans ta partie.' };
-  const r = ouvrir({ ...p, bid: marche.bid, ask: marche.ask, pas: regles.pas, minNotional: regles.minNotional, solde: f.soldeUSDT, levierMax: d.levierMax, maintenant: Date.now() });
+  const r = ouvrir({ ...p, bid: marche.bid, ask: marche.ask, pas: regles.pas, minNotional: regles.minNotional, solde: f.soldeUSDT, levierMax: d.levierMax, maintenant: tJeu() });
   if (r.erreur) return r;
   const pos = r.position;
   pos.prochainFinancement = prochainFinancement(pos.ouverteLe);
   f.soldeUSDT -= pos.marge + r.frais;
   f.positions.push(pos);
-  if (f.positions.length === 1) f.suiviJusqua = Date.now();
+  if (f.positions.length === 1) f.suiviJusqua = tJeu();
   journal(partie, 'derive', `${pos.sens === 'long' ? 'Achat' : 'Vente'} ×${pos.levier} de ${pos.qte.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${contrat(pos.s).base} à ${pos.entree.toLocaleString('fr-FR')} USDT (marge ${u(pos.marge)}, liquidation ${Math.round(pos.liquidation).toLocaleString('fr-FR')})`);
   return r;
 }
@@ -55,7 +58,7 @@ export function fermerPosition(partie, id, bid, ask) {
   const r = fermer(pos, bid, ask);
   f.soldeUSDT += r.rendu;
   f.positions.splice(i, 1);
-  f.resultats.push({ t: Date.now(), s: pos.s, net: r.net, financement: pos.financement });
+  f.resultats.push({ t: tJeu(), s: pos.s, net: r.net, financement: pos.financement });
   journal(partie, 'derive', `Position ${pos.sens} ${contrat(pos.s).base} fermée à ${r.prix.toLocaleString('fr-FR')} : résultat ${r.net >= 0 ? '+' : ''}${u(r.net)}`);
   return r;
 }
@@ -81,7 +84,7 @@ function payerFinancement(partie, pos, marque, taux, t) {
  * Nouveau prix de marque en direct : financement échu, alerte, liquidation.
  * Renvoie les textes d'événements à afficher.
  */
-export function surPrixMarque(partie, s, m, t = Date.now()) {
+export function surPrixMarque(partie, s, m, t = tJeu()) {
   if (!partie.futures) return [];
   const d = reglesDe(partie);
   const f = partie.futures;
@@ -103,7 +106,7 @@ export async function rattraper(partie, F) {
   const f = partie.futures;
   if (!f || !f.positions.length) return [];
   const d = reglesDe(partie);
-  const depuis = f.suiviJusqua || Date.now(), maintenant = Date.now();
+  const depuis = f.suiviJusqua || tJeu(), maintenant = tJeu();
   if (maintenant - depuis < 60000) return [];
   const evts = [];
   for (const s of [...new Set(f.positions.map(p => p.s))]) {

@@ -1,19 +1,20 @@
 import { specRig, coinsParSeconde } from './altcoins.js';
+import { maintenant as tJeu } from './horloge.js';
 // Minage Bitcoin : catalogue réel, pools réels, électricité réelle, calcul des gains.
 // Fonctions de calcul pures (testées) ; les données réseau arrivent de donnees.js.
 
 // Prix relevés début octobre 2026 (hors taxes, en dollars). Sources dans DECISIONS.md.
 export const CATALOGUE = [
-  { id: 's19', nom: 'Antminer S19', th: 95, w: 3250, etat: 'occasion', prixUSD: 430, refroidissement: 'air', phase: 'mono' },
-  { id: 's19jpro', nom: 'Antminer S19j Pro', th: 104, w: 3068, etat: 'occasion', prixUSD: 665, refroidissement: 'air', phase: 'mono' },
-  { id: 's19pro', nom: 'Antminer S19 Pro', th: 110, w: 3250, etat: 'occasion', prixUSD: 665, refroidissement: 'air', phase: 'mono' },
-  { id: 's21pro', nom: 'Antminer S21 Pro', th: 234, w: 3531, etat: 'neuf', prixUSD: 1910, refroidissement: 'air', phase: 'mono' },
-  { id: 's21xp', nom: 'Antminer S21 XP', th: 270, w: 3645, etat: 'neuf', prixUSD: 3800, refroidissement: 'air', phase: 'mono' },
-  { id: 's21xphyd', nom: 'Antminer S21 XP Hydro', th: 473, w: 5676, etat: 'neuf', prixUSD: 6899, refroidissement: 'hydro', phase: 'mono' },
-  { id: 's21xpphyd', nom: 'Antminer S21 XP+ Hyd', th: 500, w: 5500, etat: 'neuf', prixUSD: 9500, refroidissement: 'hydro', phase: 'tri' },
-  { id: 's23hyd', nom: 'Antminer S23 Hydro', th: 580, w: 5510, etat: 'neuf', prixUSD: 14299, refroidissement: 'hydro', phase: 'tri' },
+  { id: 's19', sortie: '2020-05-01', nom: 'Antminer S19', th: 95, w: 3250, etat: 'occasion', prixUSD: 430, refroidissement: 'air', phase: 'mono' },
+  { id: 's19jpro', sortie: '2021-06-01', nom: 'Antminer S19j Pro', th: 104, w: 3068, etat: 'occasion', prixUSD: 665, refroidissement: 'air', phase: 'mono' },
+  { id: 's19pro', sortie: '2020-05-01', nom: 'Antminer S19 Pro', th: 110, w: 3250, etat: 'occasion', prixUSD: 665, refroidissement: 'air', phase: 'mono' },
+  { id: 's21pro', sortie: '2024-07-01', nom: 'Antminer S21 Pro', th: 234, w: 3531, etat: 'neuf', prixUSD: 1910, refroidissement: 'air', phase: 'mono' },
+  { id: 's21xp', sortie: '2024-10-01', nom: 'Antminer S21 XP', th: 270, w: 3645, etat: 'neuf', prixUSD: 3800, refroidissement: 'air', phase: 'mono' },
+  { id: 's21xphyd', sortie: '2024-10-01', nom: 'Antminer S21 XP Hydro', th: 473, w: 5676, etat: 'neuf', prixUSD: 6899, refroidissement: 'hydro', phase: 'mono' },
+  { id: 's21xpphyd', sortie: '2025-04-01', nom: 'Antminer S21 XP+ Hyd', th: 500, w: 5500, etat: 'neuf', prixUSD: 9500, refroidissement: 'hydro', phase: 'tri' },
+  { id: 's23hyd', sortie: '2025-11-01', nom: 'Antminer S23 Hydro', th: 580, w: 5510, etat: 'neuf', prixUSD: 14299, refroidissement: 'hydro', phase: 'tri' },
   // ASIC Scrypt : minage fusionné Litecoin + Dogecoin (Kryptex, octobre 2026)
-  { id: 'l9', nom: 'Antminer L9', th: 0, w: 3260, etat: 'neuf', prixUSD: 6500, refroidissement: 'air', phase: 'mono', production: [{ coin: 'LTC', h: 16e9 }, { coin: 'DOGE', h: 16e9 }] }
+  { id: 'l9', sortie: '2024-03-01', nom: 'Antminer L9', th: 0, w: 3260, etat: 'neuf', prixUSD: 6500, refroidissement: 'air', phase: 'mono', production: [{ coin: 'LTC', h: 16e9 }, { coin: 'DOGE', h: 16e9 }] }
 ];
 
 // Frais et seuils de versement réels (relevé spark.money, octobre 2026).
@@ -100,8 +101,12 @@ export function puissanceDispo(logement, kva) {
   return Math.max(0, kva - RESERVE_FOYER_KVA);
 }
 
+// Marché des machines : facteur de prix (rejeu d'une date passée, voir donnees.js) et dates de sortie.
+export const marcheMachines = { facteur: 1 };
+export function disponible(m, t) { return !m.sortie || t >= Date.parse(m.sortie); }
+
 export function prixMachineEUR(m, eurUsd) {
-  const ht = m.prixUSD / eurUsd;
+  const ht = m.prixUSD * marcheMachines.facteur / eurUsd;
   return { ht, ttc: ht * (1 + TVA), livraison: LIVRAISON[m.etat].eur, total: ht * (1 + TVA) + LIVRAISON[m.etat].eur };
 }
 
@@ -298,9 +303,9 @@ export function infosPanne(m) { return m.panne ? PANNES.find(p => p.type === m.p
 // Valeur de revente d'une machine sur le marché de l'occasion, en dollars.
 export function valeurReventeUSD(m) {
   const md = spec(m);
-  const prix = md.rig ? md.prixEUR * (m.eurUsdAchat || 1.17) / 1.2 : md.prixUSD;
+  const prix = md.rig ? md.prixEUR * (m.eurUsdAchat || 1.17) / 1.2 : md.prixUSD * marcheMachines.facteur;
   const base = md.etat === 'neuf' ? prix * 0.7 : prix * 0.85;
-  const ans = (Date.now() - m.acheteLe) / (365 * 864e5);
+  const ans = (tJeu() - m.acheteLe) / (365 * 864e5);
   const etat = m.statut === 'panne' || (m.santeHash ?? 1) < 1 ? 0.5 : 1;
   return Math.max(40, base * Math.max(0.3, 1 - 0.15 * ans) * etat);
 }

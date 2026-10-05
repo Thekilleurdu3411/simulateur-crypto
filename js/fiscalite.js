@@ -1,15 +1,20 @@
 // Fiscalité française des actifs numériques (particulier), calculs purs et testés.
+import { tmi as tmiProfil } from './vie.js';
 // Plus-values : article 150 VH bis du CGI, méthode du portefeuille global (formulaire 2086).
 // Minage : bénéfices non commerciaux, régime micro-BNC.
 
 export const PFU = 0.314;                 // 12,8 % d'impôt + 18,6 % de prélèvements sociaux (revenus 2025 et suivants)
+export const PFU_AVANT_2025 = 0.30;       // 12,8 % + 17,2 % de prélèvements sociaux (revenus 2018 à 2024)
+export const PS_AVANT_2025 = 0.172;
+export const pfu = an => (an >= 2025 ? PFU : PFU_AVANT_2025);
+export const ps = an => (an >= 2025 ? PRELEVEMENTS_SOCIAUX : PS_AVANT_2025);
 export const SEUIL_CESSIONS = 305;        // total annuel des cessions en dessous duquel rien n'est imposé
 export const MICRO_BNC = { plafond: 77700, abattement: 0.34 };
 export const PRELEVEMENTS_SOCIAUX = 0.186;
 export const MAJORATION_RETARD = 0.10;
 export const INTERET_RETARD_MOIS = 0.002;
 
-// Tranche marginale supposée selon la situation, en attendant la vie quotidienne (V0.9).
+// Tranche marginale par défaut (tests) ; en jeu, elle est calculée à partir du salaire (voir vie.js).
 export const TMI_PAR_SITUATION = { sans: 0, etudiant: 0, alternant: 0, salarie: 0.11 };
 
 export function fiscDe(partie) {
@@ -43,16 +48,16 @@ export function bilan(fisc, an, situation) {
   const totalCessions = cessions.reduce((s, c) => s + c.prix, 0);
   const pvNette = cessions.reduce((s, c) => s + c.pv, 0);
   const exonere = totalCessions <= SEUIL_CESSIONS;
-  const impotPV = exonere || pvNette <= 0 ? 0 : pvNette * PFU;
+  const impotPV = exonere || pvNette <= 0 ? 0 : pvNette * pfu(an);
   const recettes = fisc.minage.filter(m => annee(m.t) === an).reduce((s, m) => s + m.eur, 0);
   const microBNC = recettes <= MICRO_BNC.plafond;
   const base = recettes * (1 - MICRO_BNC.abattement); // au-delà du plafond, il faudrait le régime réel (non simulé)
-  const tmi = TMI_PAR_SITUATION[situation] ?? 0.11;
-  const ir = base * tmi, ps = base * PRELEVEMENTS_SOCIAUX;
+  const tmi = situation && typeof situation === 'object' ? tmiProfil(situation) : (TMI_PAR_SITUATION[situation] ?? 0.11);
+  const ir = base * tmi, psm = base * ps(an);
   return {
     annee: an, nbCessions: cessions.length, totalCessions, pvNette, exonere, impotPV,
-    recettesMinage: recettes, microBNC, baseBNC: base, tmi, irMinage: ir, psMinage: ps,
-    total: impotPV + ir + ps
+    recettesMinage: recettes, microBNC, baseBNC: base, tmi, irMinage: ir, psMinage: psm,
+    total: impotPV + ir + psm
   };
 }
 
@@ -71,9 +76,9 @@ export function calendrier(an) {
  */
 export function redressement(reel, declare, situation, moisRetard) {
   if (!declare) return { du: reel.total * (1 + MAJORATION_RETARD), motif: 'Déclaration absente à la date limite : majoration de 10 %.' };
-  const declarePV = declare.pv > 0 && reel.totalCessions > SEUIL_CESSIONS ? declare.pv * PFU : 0;
+  const declarePV = declare.pv > 0 && reel.totalCessions > SEUIL_CESSIONS ? declare.pv * pfu(reel.annee) : 0;
   const base = Math.max(0, declare.recettes) * (1 - MICRO_BNC.abattement);
-  const declareMinage = base * ((TMI_PAR_SITUATION[situation] ?? 0.11) + PRELEVEMENTS_SOCIAUX);
+  const declareMinage = base * ((reel.tmi ?? (typeof situation === 'string' ? TMI_PAR_SITUATION[situation] : null) ?? 0.11) + ps(reel.annee));
   const declareTotal = declarePV + declareMinage;
   const manque = Math.max(0, reel.total - declareTotal);
   if (manque < 1) return { du: reel.total, motif: null };

@@ -10,7 +10,9 @@ import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
 import { sectionVie, apercuProfil } from './views-vie.js';
 import { changements } from './views-reglages.js';
+import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES } from './vie.js';
+import { maintenant as tJeu, enRejeu } from './horloge.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -49,12 +51,13 @@ export function valeurLive(cle, ctx) {
     case 'statut': {
       const s = M.etat.statut;
       if (s === 'direct') return { t: 'Direct', cls: 'badge ok' };
+      if (s === 'rejeu') return { t: 'Rejeu', cls: 'badge ok' };
       if (s === 'reconnexion' || s === 'connexion') return { t: s === 'connexion' ? 'Connexion' : 'Reconnexion', cls: 'badge attente' };
       return { t: 'Hors ligne', cls: 'badge ko' };
     }
-    case 'horloge': return { t: new Date().toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) };
-    case 'kyc': return { t: duree(partie.plateforme.kycFin - Date.now()) };
-    case 'liv': { const m = partie.minage?.machines.find(x => x.id === arg); return { t: m ? duree(m.livraisonLe - Date.now()) : '' }; }
+    case 'horloge': return { t: new Date(tJeu()).toLocaleString('fr-FR', enRejeu() ? { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' } : { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) };
+    case 'kyc': return { t: duree(partie.plateforme.kycFin - tJeu()) };
+    case 'liv': { const m = partie.minage?.machines.find(x => x.id === arg); return { t: m ? duree(m.livraisonLe - tJeu()) : '' }; }
     case 'pool': { const q = partie.minage?.soldePool || 0; const p = M.prixDeBase('BTC'); return { t: qte(q) + ' BTC' + (p ? ' · ' + eur(q * p) : '') }; }
     case 'facture': { const mn = partie.minage; return { t: mn ? eur(mn.factureEUR) + ' · ' + Math.round(mn.factureKWh).toLocaleString('fr-FR') + ' kWh' : '—' }; }
     case 'factureHeb': { const mn = partie.minage; return { t: mn ? eur(mn.factureHebEUR || 0) + ' · ' + Math.round(mn.factureHebKWh || 0).toLocaleString('fr-FR') + ' kWh' : '—' }; }
@@ -240,10 +243,13 @@ export function vueNouvellePartie(ctx) {
       <div class="section-titre"><h2>Date de départ</h2></div>
       <div class="carte">
         <div class="segment">
-          <button aria-pressed="true">Aujourd'hui (direct)</button>
-          <button disabled>Date passée</button>
+          <button data-action="depart" data-v="direct" aria-pressed="${b.depart.type === 'direct'}">Aujourd'hui (direct)</button>
+          <button data-action="depart" data-v="passe" aria-pressed="${b.depart.type === 'passe'}">Date passée</button>
         </div>
-        <p class="discret" style="font-size:13px">Ta partie démarre maintenant, synchronisée sur le marché réel. Le départ à une date passée arrive dans une prochaine version.</p>
+        ${b.depart.type === 'passe' ? `<label class="champ">Jour de départ<input id="f-depart" type="date" min="${DATE_MIN_REJEU}" max="${new Date(Date.now() - 864e5).toISOString().slice(0, 10)}" value="${e(b.depart.jour)}" data-input="depart-jour"></label>
+          <p class="discret" style="font-size:13px">Le marché rejoue les vraies bougies de ce jour-là, minute par minute, au rythme réel. Réseau Bitcoin, météo, euro-dollar et jours Tempo suivent aussi la date. Possible depuis le 5 janvier 2020 (premières cotations en euros).</p>
+          <div class="carte alerte" style="font-size:12px;gap:4px"><span>Pas encore rejoués : perpétuels, minage hors Bitcoin, carnet d'ordres réel (reconstitué autour du prix). Salaires, loyers et tarifs d'électricité restent ceux de 2026.</span></div>`
+        : `<p class="discret" style="font-size:13px">Ta partie démarre maintenant, synchronisée sur le marché réel.</p>`}
       </div>
     </section>
     <section class="section">
@@ -509,7 +515,7 @@ function ongletFinances(ctx) {
       <div class="carte" style="gap:8px">
         <div class="ligne-kv"><span>Difficulté</span><span>${d.personnalisee ? `Personnalisée (base ${e(d.base)})` : `${e(d.nom)} · score ×${String(d.score).replace('.', ',')}`}</span></div>
         ${d.personnalisee ? changements(partie.difficulte, partie.reglages).map(t => `<div class="effet" style="font-size:12px"><span class="puce-pt"></span><span>${e(t)}</span></div>`).join('') : ''}
-        <div class="ligne-kv"><span>Début</span><span>${e(dateHeure(partie.creeLe))}</span></div>
+        <div class="ligne-kv"><span>Début</span><span>${partie.depart && partie.depart.type === 'passe' ? 'Rejeu · ' + new Date(partie.creeLe).toLocaleDateString('fr-FR') : e(dateHeure(partie.creeLe))}</span></div>
         <div class="ligne-kv"><span>Capital de départ</span><span class="num">${eur(partie.capitalDepart)}</span></div>
         <div class="grille-2" style="margin-top:8px">
           <button class="bouton secondaire petit" data-action="exporter">Exporter</button>

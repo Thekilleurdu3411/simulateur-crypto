@@ -1,8 +1,9 @@
 // Section « Impôts » de l'onglet Finances.
 import { DIFFICULTES, reglesDe } from './config.js';
-import { fiscDe, bilan, calendrier, SEUIL_CESSIONS, PFU } from './fiscalite.js';
+import { fiscDe, bilan, calendrier, SEUIL_CESSIONS, pfu } from './fiscalite.js';
 import { mode } from './jeufisc.js';
 import { eur, dateHeure, echapper as e } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 const STATUTS = { 'a-venir': 'À venir', ouverte: 'À remplir', deposee: 'Déposée', retard: 'En retard', payee: 'Payée' };
 
@@ -13,8 +14,8 @@ export function sectionImpots(ctx) {
     <div class="carte" style="font-size:13px;color:var(--texte-2)">Fiscalité désactivée dans ta partie.</div></section>`;
   const d = reglesDe(partie);
   const f = fiscDe(partie);
-  const an = new Date().getFullYear();
-  const b = bilan(f, an, partie.profil.situation);
+  const an = new Date(tJeu()).getFullYear();
+  const b = bilan(f, an, partie.profil);
   const cal = calendrier(an);
   const decls = Object.entries(f.declarations).sort((x, y) => y[0] - x[0]);
   const cessionsAn = f.cessions.filter(c => new Date(c.t).getFullYear() === an);
@@ -28,7 +29,7 @@ export function sectionImpots(ctx) {
         <div class="ligne-kv" style="font-size:13px"><span>Impôt estimé</span><span class="num" style="color:var(--texte)">${eur(b.total)}${b.exonere && b.totalCessions > 0 ? ' (ventes sous 305 €)' : ''}</span></div>
         ${m === 'preleve' ? `<div class="ligne-kv" style="font-size:13px"><span>Déjà prélevé</span><span class="num">${eur(f.preleve[an] || 0)}</span></div>` : ''}`
       : `<p class="discret" style="font-size:12px">Aucune estimation en Réalité : à toi de calculer avec la méthode du formulaire 2086 (détail des ventes ci-dessous).</p>`}
-      <p class="discret" style="font-size:12px">Plus-values : flat tax de ${String(PFU * 100).replace('.', ',')} % au-delà de ${SEUIL_CESSIONS} € de ventes dans l'année, moins-values de l'année déduites. Échanger une crypto contre une autre (USDT compris) n'est pas imposable. Minage : micro-BNC, 34 % d'abattement. Déclaration au printemps ${an + 1}, avant le ${new Date(cal.limite).toLocaleDateString('fr-FR')}, paiement en septembre.</p>
+      <p class="discret" style="font-size:12px">Plus-values : flat tax de ${String(Math.round(pfu(an) * 1000) / 10).replace('.', ',')} % au-delà de ${SEUIL_CESSIONS} € de ventes dans l'année, moins-values de l'année déduites. Échanger une crypto contre une autre (USDT compris) n'est pas imposable. Minage : micro-BNC, 34 % d'abattement. Déclaration au printemps ${an + 1}, avant le ${new Date(cal.limite).toLocaleDateString('fr-FR')}, paiement en septembre.</p>
     </div>
     ${m === 'manuel' && cessionsAn.length ? `<div class="carte" style="gap:0;padding:4px 16px">
       ${cessionsAn.map(c => `<div class="rangee" style="min-height:0;padding:8px 0;font-size:12px"><span class="num">${e(dateHeure(c.t))}</span>

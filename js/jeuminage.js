@@ -1,11 +1,13 @@
 // Règles du minage dans la partie : achats, mise en marche, factures, versements.
 import { HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur, prixHebergeurEUR, supplementAbonnementParSeconde } from './minage.js';
-import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD } from './minage.js';
+import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD, disponible } from './minage.js';
+import { enRejeu } from './horloge.js';
 import { DIFFICULTES, reglesDe } from './config.js';
 import { journal } from './state.js';
 import { noterMinage } from './jeufisc.js';
 import { calculerRig, COINS_GPU, RIG } from './altcoins.js';
 import { eur } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 function premierDuMoisSuivant(t) {
   const d = new Date(t);
@@ -17,7 +19,7 @@ export function minageDe(partie) {
     const kva = COMPTEUR[partie.profil.logement] || 6;
     partie.minage = {
       pool: 'braiins', machines: [], soldePool: 0, gainsTotal: 0, factureKWh: 0, factureEUR: 0,
-      contrat: { type: 'base', kva }, kvaInitial: kva, dernierCalcul: Date.now(), prochaineFacture: premierDuMoisSuivant(Date.now()),
+      contrat: { type: 'base', kva }, kvaInitial: kva, dernierCalcul: tJeu(), prochaineFacture: premierDuMoisSuivant(tJeu()),
       reseau: null, couleurs: {}
     };
   }
@@ -39,6 +41,8 @@ export function acheter(partie, id, eurUsd, lieu = 'maison') {
   const m = modele(id);
   const d = reglesDe(partie);
   if (!m) return { erreur: 'Machine inconnue.' };
+  if (!disponible(m, tJeu())) return { erreur: `${m.nom} n'est pas encore sortie à cette date.` };
+  if (m.production && enRejeu()) return { erreur: "Minage Litecoin et Dogecoin indisponible en rejeu : pas d'historique public de leurs réseaux." };
   const h = lieu !== 'maison' ? hebergeur(lieu) : null;
   if (!h && partie.profil.logement === 'parents') return { erreur: "Chez tes parents, pas de place pour un ASIC : bruit, chaleur et compteur partagé. Fais-la livrer chez un hébergeur." };
   if (m.refroidissement === 'hydro' && !(h && h.hydro)) return { erreur: 'Cette machine demande un circuit de refroidissement à eau : fais-la livrer chez un hébergeur équipé.' };
@@ -49,9 +53,9 @@ export function acheter(partie, id, eurUsd, lieu = 'maison') {
   partie.banque.solde -= p.total;
   const mn = minageDe(partie);
   const delai = LIVRAISON[m.etat].jours * 864e5 / d.temps;
-  const machine = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), modele: id, statut: 'livraison', livraisonLe: Date.now() + delai, acheteLe: Date.now(), prixPaye: p.total,
-    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: m.etat === 'neuf' ? Date.now() + delai + GARANTIE_JOURS * 864e5 : 0,
-    lieu: h ? h.id : 'maison', engagementFin: h ? Date.now() + delai + h.engagementMois * 30 * 864e5 : 0 };
+  const machine = { id: tJeu().toString(36) + Math.random().toString(36).slice(2, 5), modele: id, statut: 'livraison', livraisonLe: tJeu() + delai, acheteLe: tJeu(), prixPaye: p.total,
+    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: m.etat === 'neuf' ? tJeu() + delai + GARANTIE_JOURS * 864e5 : 0,
+    lieu: h ? h.id : 'maison', engagementFin: h ? tJeu() + delai + h.engagementMois * 30 * 864e5 : 0 };
   mn.machines.push(machine);
   journal(partie, 'machine', `Achat : ${m.nom} (${m.etat}) pour ${eur(p.total)}, livraison ${h ? 'chez ' + h.nom + ' ' : ''}prévue dans ${Math.round(delai / 36e5)} h`);
   return { machine };
@@ -167,7 +171,7 @@ export function depoussierer(partie, id) {
 export function devisReparation(partie, m) {
   const p = infosPanne(m);
   if (!p) return null;
-  const garantie = m.garantieFin && Date.now() < m.garantieFin;
+  const garantie = m.garantieFin && tJeu() < m.garantieFin;
   const d = reglesDe(partie);
   const loin = m.lieu && m.lieu !== 'maison' ? 5 : 0; // le technicien de l'hébergeur passe sous quelques jours
   return { panne: p, garantie, cout: garantie ? ENVOI_SAV : p.cout, delai: ((garantie ? Math.max(p.jours, 10) : p.jours) + loin) * 864e5 / d.temps };
@@ -179,7 +183,7 @@ export function reparer(partie, id) {
   if (!devis) return { erreur: 'Aucune panne à réparer.' };
   if (devis.cout > partie.banque.solde + 1e-9) return { erreur: 'Solde bancaire insuffisant pour la réparation : ' + eur(devis.cout) + '.' };
   partie.banque.solde -= devis.cout;
-  m.statut = 'reparation'; m.reparationFin = Date.now() + devis.delai;
+  m.statut = 'reparation'; m.reparationFin = tJeu() + devis.delai;
   journal(partie, 'machine', `Réparation lancée : ${devis.panne.nom} sur ${spec(m).nom}, ${eur(devis.cout)}${devis.garantie ? ' (sous garantie, frais d\'envoi)' : ''}`);
   return {};
 }
@@ -219,6 +223,7 @@ export function acheterVentilation(partie) {
 
 export function acheterRig(partie, carteId, nb, coin, eurUsd) {
   const d = reglesDe(partie);
+  if (enRejeu()) return { erreur: 'Rigs indisponibles en rejeu.' };
   if (partie.profil.logement === 'parents') return { erreur: "Chez tes parents, le compteur est partagé : pas de rig possible pour l'instant." };
   if (!(nb >= 1 && nb <= RIG.maxCartes) || !COINS_GPU[coin]) return { erreur: 'Configuration de rig invalide.' };
   const r = calculerRig(carteId, nb, coin);
@@ -226,9 +231,9 @@ export function acheterRig(partie, carteId, nb, coin, eurUsd) {
   partie.banque.solde -= r.prix;
   const delai = RIG.livraisonJours * 864e5 / d.temps;
   const mn = minageDe(partie);
-  const machine = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), modele: 'rig', config: { carte: carteId, nb, coin },
-    statut: 'livraison', livraisonLe: Date.now() + delai, acheteLe: Date.now(), prixPaye: r.prix, eurUsdAchat: eurUsd || null,
-    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: Date.now() + delai + 2 * 365 * 864e5 };
+  const machine = { id: tJeu().toString(36) + Math.random().toString(36).slice(2, 5), modele: 'rig', config: { carte: carteId, nb, coin },
+    statut: 'livraison', livraisonLe: tJeu() + delai, acheteLe: tJeu(), prixPaye: r.prix, eurUsdAchat: eurUsd || null,
+    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: tJeu() + delai + 2 * 365 * 864e5 };
   mn.machines.push(machine);
   journal(partie, 'machine', `Achat d'un rig de ${nb} × ${r.carte.nom} (${r.alims} alimentation${r.alims > 1 ? 's' : ''}) pour ${eur(r.prix)}`);
   return { machine };
@@ -277,7 +282,7 @@ export function envoyer(partie, id, hostId, eurUsd) {
   if (cout > partie.banque.solde + 1e-9) return { erreur: 'Solde bancaire insuffisant : ' + eur(cout) + '.' };
   partie.banque.solde -= cout;
   const delai = ENVOI.jours * 864e5 / d.temps;
-  m.statut = 'envoi'; m.envoiVers = h.id; m.envoiFin = Date.now() + delai;
+  m.statut = 'envoi'; m.envoiVers = h.id; m.envoiFin = tJeu() + delai;
   m.engagementFin = m.envoiFin + h.engagementMois * 30 * 864e5;
   journal(partie, 'machine', `${spec(m).nom} envoyée chez ${h.nom} (${h.pays}) : ${eur(cout)}, arrivée dans ${Math.round(delai / 36e5)} h`);
   return {};
@@ -288,11 +293,11 @@ export function rapatrier(partie, id) {
   const m = mn.machines.find(x => x.id === id);
   const d = reglesDe(partie);
   if (!m || chezSoi(m) || m.statut !== 'arret') return { erreur: 'Arrête la machine avant de la faire revenir.' };
-  if (Date.now() < (m.engagementFin || 0)) return { erreur: 'Engagement en cours jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') + '. Tu peux la vendre sur place en attendant.' };
+  if (tJeu() < (m.engagementFin || 0)) return { erreur: 'Engagement en cours jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') + '. Tu peux la vendre sur place en attendant.' };
   if (partie.profil.logement === 'parents') return { erreur: 'Pas de place chez tes parents pour la récupérer.' };
   if (ENVOI.eur > partie.banque.solde) return { erreur: 'Solde bancaire insuffisant : ' + eur(ENVOI.eur) + '.' };
   partie.banque.solde -= ENVOI.eur;
-  m.statut = 'envoi'; m.envoiVers = 'maison'; m.envoiFin = Date.now() + ENVOI.jours * 864e5 / d.temps;
+  m.statut = 'envoi'; m.envoiVers = 'maison'; m.envoiFin = tJeu() + ENVOI.jours * 864e5 / d.temps;
   journal(partie, 'machine', `${spec(m).nom} rapatriée chez toi : ${eur(ENVOI.eur)}`);
   return {};
 }

@@ -2,7 +2,8 @@
 import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
 import { vueReglages, valeurTexte } from './views-reglages.js';
-import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal } from './state.js';
+import { reglerHorloge, enRejeu } from './horloge.js';
+import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
 import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } from './portefeuille.js';
@@ -18,13 +19,15 @@ import { futuresDe, transferer, ouvrirPosition, fermerPosition, surPrixMarque, r
 import { acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
 import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
-import { modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES, HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur } from './minage.js';
+import { marcheMachines, modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES, HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur } from './minage.js';
 import { eur, prix, qte, pct, duree } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 const racine = document.getElementById('app');
 const superpositions = document.getElementById('superpositions');
 
 let partie = charger();
+reglerHorloge(partie);
 const saisieVide = () => ({ montant: '', quantite: '', prix: '', stop: '', limiteStop: '' });
 const app = {
   ecran: 'lancement',
@@ -39,7 +42,8 @@ const app = {
     profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', experience: 'debutant', anneeApprentissage: 1, logement: 'appart', modeVie: 'normal' },
     difficulte: 'expert',
     capital: DIFFICULTES.expert.capital,
-    reglages: {}
+    reglages: {},
+    depart: { type: 'direct', jour: '' }
   },
   enCours: false,
   confirmation: null,
@@ -71,7 +75,7 @@ definirEvaluateur(p => {
 });
 
 function ctx() {
-  const cj = jourTempo(Date.now()), cd = jourTempo(Date.now() + 864e5);
+  const cj = jourTempo(tJeu()), cd = jourTempo(tJeu() + 864e5);
   const cache = partie?.minage?.couleurs || {};
   return { app, partie, M: marche, D, F, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
 }
@@ -88,6 +92,23 @@ function rendre() {
 }
 
 function rendreSuperpositions() { superpositions.innerHTML = vueSuperpositions(app); }
+
+// Date de départ d'une partie en rejeu : entre la première date jouable et la veille.
+function verifierJour(jour) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(jour || '')) return 'Choisis une date de départ.';
+  if (jour < DATE_MIN_REJEU) return 'Le rejeu commence au ' + new Date(DATE_MIN_REJEU).toLocaleDateString('fr-FR') + ' : pas de cotation en euros avant.';
+  if (dateDepart(jour) > Date.now() - 864e5) return 'Choisis une date passée, au plus tard hier.';
+  return null;
+}
+
+// L'horloge du jeu change (nouvelle partie à une date passée, abandon d'un rejeu) : on recharge les données.
+function changerHorloge() {
+  reglerHorloge(partie);
+  M.changerMode();
+  D.changerMode().then(() => preparerMeteo()).catch(() => {});
+  D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).catch(() => {});
+  app.graph = null;
+}
 
 // Réglages avancés : fusionne, borne et garde seulement les écarts à la difficulté de base.
 function regler(cle, val) {
@@ -166,7 +187,7 @@ function majBougie(symbole) {
   const t = M.ticker(symbole);
   const der = g.bougies[g.bougies.length - 1];
   const d = dureeIntervalle[g.intervalle];
-  if (Date.now() >= der.t + d && g.intervalle !== '1w') {
+  if (tJeu() >= der.t + d && g.intervalle !== '1w') {
     g.bougies.push({ t: der.t + d, o: der.c, h: t.c, l: t.c, c: t.c });
     g.bougies.shift();
   } else {
@@ -237,7 +258,7 @@ async function placerOrdreEnAttente(c) {
   const s = app.saisie;
   const params = {
     s: c.s, base: c.base, sens: app.sens, type: app.typeOrdre, qte: nombre(s.quantite),
-    prix: nombre(s.prix), stop: nombre(s.stop), limiteStop: nombre(s.limiteStop), maintenant: Date.now()
+    prix: nombre(s.prix), stop: nombre(s.stop), limiteStop: nombre(s.limiteStop), maintenant: tJeu()
   };
   if (!(params.qte > 0)) return toast('Indique une quantité de ' + c.base + '.', 'erreur');
   app.enCours = true; rendre();
@@ -290,13 +311,13 @@ async function lancerRattrapage(retour) {
 function ajouterAbsence(depuis, evenements) {
   if (!evenements.length) return;
   if (app.absence) app.absence.evenements.push(...evenements);
-  else app.absence = { duree: duree(Date.now() - (depuis || Date.now())), evenements: [...evenements] };
+  else app.absence = { duree: duree(tJeu() - (depuis || tJeu())), evenements: [...evenements] };
 }
 
 // Minage : fait avancer gains, factures et livraisons jusqu'à maintenant.
 function avancerMinage(absence = false) {
   if (!partie || !partie.minage) return [];
-  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), prixEUR, alt: D.etat.alt, eurUsd: D.etat.eurUsd, temperature: D.temperatureExterieure, absence });
+  return avancerPartie(partie, tJeu(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), prixEUR, alt: D.etat.alt, eurUsd: D.etat.eurUsd, temperature: D.temperatureExterieure, absence });
 }
 
 // Météo réelle de la ville du joueur (pour la température de la pièce).
@@ -312,7 +333,7 @@ async function preparerMeteo() {
 async function rattraperMinage(depuis) {
   if (!partie || !partie.minage) return;
   const mn = partie.minage;
-  if (mn.contrat.type === 'tempo') await D.chargerTempo(joursEntre(mn.dernierCalcul, Date.now())).catch(() => {});
+  if (mn.contrat.type === 'tempo') await D.chargerTempo(joursEntre(mn.dernierCalcul, tJeu())).catch(() => {});
   await preparerMeteo();
   const evts = avancerMinage(true);
   sauver(partie);
@@ -387,6 +408,7 @@ const actions = {
   'vers-reglages': () => changerEcran('reglages'),
   'fin-reglages': () => changerEcran('partie'),
   'reg-reset': () => { app.brouillon.reglages = {}; rendre(); },
+  depart: v => { app.brouillon.depart.type = v; rendre(); },
   reg: v => {
     const i = v.indexOf(':'), cle = v.slice(0, i), brut = v.slice(i + 1);
     const g = REGLAGES.find(x => x.cle === cle); if (!g) return;
@@ -398,8 +420,13 @@ const actions = {
     const profil = { ...b.profil, prenom: b.profil.prenom.trim(), nom: b.profil.nom.trim(), ville: b.profil.ville.trim() };
     if (!(profil.situation === 'alternant' || profil.situation === 'salarie')) delete profil.metier;
     effacer();
-    partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital, reglages: b.reglages });
+    if (b.depart.type === 'passe') {
+      const err = verifierJour(b.depart.jour);
+      if (err) return toast(err, 'erreur');
+    }
+    partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital, reglages: b.reglages, depart: b.depart });
     sauver(partie);
+    changerHorloge();
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
@@ -541,7 +568,7 @@ const actions = {
   contrat: v => {
     avancerMinage(); const mn = minageDe(partie); if (mn.contrat.type === v) return;
     mn.contrat.type = v; journal(partie, 'facture', 'Contrat d\'électricité : option ' + (v === 'tempo' ? 'Tempo' : 'Base'));
-    if (v === 'tempo') D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).then(() => { if (app.onglet === 'minage') rendre(); });
+    if (v === 'tempo') D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).then(() => { if (app.onglet === 'minage') rendre(); });
     sauver(partie); rendre();
   },
   kyc: () => { demarrerKyc(partie); sauver(partie); rendre(); },
@@ -549,7 +576,8 @@ const actions = {
   virer: () => virer(),
   exporter: () => exporter(),
   abandonner: () => confirmer('Abandonner la partie ?', 'Ta partie sera définitivement effacée de ce téléphone.', 'Abandonner', () => {
-    effacer(); partie = null; changerEcran('lancement');
+    const etaitRejeu = enRejeu();
+    effacer(); partie = null; if (etaitRejeu) changerHorloge(); changerEcran('lancement');
   }, true),
   annuler: () => { app.confirmation = null; rendreSuperpositions(); },
   confirmer: () => { const f = app.confirmation?.action; app.confirmation = null; rendreSuperpositions(); f && f(); }
@@ -567,6 +595,7 @@ document.addEventListener('input', ev => {
   if (!el) return;
   const k = el.dataset.input;
   if (k.startsWith('profil.')) { app.brouillon.profil[k.slice(7)] = el.value; if (k === 'profil.metier') rendre(); }
+  else if (k === 'depart-jour') app.brouillon.depart.jour = el.value;
   else if (k.startsWith('reg:')) {
     const g = REGLAGES.find(x => x.cle === k.slice(4)); if (!g) return;
     regler(g.cle, Number(el.value) / (g.echelle || 1));
@@ -599,14 +628,14 @@ M.ecouter((type, symbole, donnees) => {
   else if (type === 'bougie') surBougie(symbole, donnees);
   else if (type === 'statut') {
     planifierMaj();
-    const direct = M.etat.statut === 'direct';
+    const direct = M.etat.statut === 'direct' || M.etat.statut === 'rejeu';
     if (direct && !etaitDirect) lancerRattrapage(false); // reconnexion : on comble le trou
     etaitDirect = direct;
   }
   else if (type === 'liste' && app.ecran === 'jeu' && app.onglet === 'marche' && !app.crypto) rendre();
 });
 
-function marquerVu() { if (partie) { partie.vuLe = Date.now(); sauver(partie); } }
+function marquerVu() { if (partie) { partie.vuLe = tJeu(); sauver(partie); } }
 setInterval(marquerVu, 30000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') marquerVu();
@@ -628,9 +657,9 @@ M.demarrer();
 const vuAuDemarrage = partie?.vuLe;
 lancerRattrapage(true).then(marquerVu);
 D.demarrer().then(() => rattraperMinage(vuAuDemarrage));
-D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {});
-setInterval(() => D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {}), 36e5);
-D.ecouter(() => { if (app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
+D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).catch(() => {});
+setInterval(() => D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).catch(() => {}), 36e5);
+D.ecouter(() => { marcheMachines.facteur = enRejeu() ? D.etat.prixMachines : 1; if (app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
 
 // Perpétuels : prix de marque en direct, financement et liquidations.
 F.ecouter((type, s) => {

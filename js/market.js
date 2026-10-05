@@ -1,5 +1,6 @@
 // Connexion au marché réel : flux en direct (WebSocket) et requêtes ponctuelles (REST).
 import { API_REST, API_WS, CRYPTOS } from './config.js';
+import { maintenant as tJeu, enRejeu } from './horloge.js';
 
 const tickers = {};          // { BTCEUR: { c, o, h, l, q, t } }
 const indisponibles = new Set();
@@ -41,6 +42,7 @@ async function chargerTickers() {
 
 function connecter() {
   clearTimeout(minuterie);
+  if (enRejeu()) return;
   // Mini-tickers pour les prix, bougies d'une minute pour suivre les ordres en attente.
   const flux = CRYPTOS.filter(c => !indisponibles.has(c.s))
     .flatMap(c => [c.s.toLowerCase() + '@miniTicker', c.s.toLowerCase() + '@kline_1m']).join('/');
@@ -70,19 +72,134 @@ function planifier() {
   minuterie = setTimeout(connecter, delai);
 }
 
+let demarre = false;
 export async function demarrer() {
+  if (!demarre) {
+    demarre = true;
+    document.addEventListener('visibilitychange', () => {
+      if (enRejeu()) { if (document.visibilityState === 'visible') pasRejeu(); return; }
+      if (document.visibilityState === 'visible' && !ws) { essais = 0; connecter(); chargerTickers().catch(() => {}); }
+    });
+    window.addEventListener('online', () => { if (!enRejeu() && !ws) { essais = 0; connecter(); } });
+  }
+  if (enRejeu()) return demarrerRejeu();
   try { await chargerTickers(); }
   catch (e) { etat.statut = 'hors-ligne'; notifier('statut'); }
   connecter();
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !ws) { essais = 0; connecter(); chargerTickers().catch(() => {}); }
-  });
-  window.addEventListener('online', () => { if (!ws) { essais = 0; connecter(); } });
+}
+
+/** À appeler quand l'horloge change (nouvelle partie, partie à une date passée, abandon). */
+export function changerMode() {
+  for (const k of Object.keys(tickers)) delete tickers[k];
+  indisponibles.clear();
+  for (const k of Object.keys(tampons)) delete tampons[k];
+  for (const k of Object.keys(stats24)) delete stats24[k];
+  for (const k of Object.keys(minuteVue)) delete minuteVue[k];
+  for (const k of Object.keys(essaiRejeu)) delete essaiRejeu[k];
+  clearInterval(boucleRejeu); boucleRejeu = null;
+  clearTimeout(minuterie);
+  if (ws) { const w = ws; ws = null; w.onclose = null; try { w.close(); } catch (e) {} }
+  etat.statut = 'connexion'; notifier('statut'); notifier('liste');
+  return demarrer();
+}
+
+// ---------- Rejeu d'une date passée ----------
+// Les prix viennent des vraies bougies d'une minute de la date du jeu. Pas de carnet historique public :
+// meilleurs prix et carnet sont reconstitués autour du prix (voir DECISIONS.md).
+const tampons = {};   // { BTCEUR: [bougies 1 min] }
+const stats24 = {};   // { BTCEUR: { o, h, l, q, maj } }
+const minuteVue = {}; // dernière minute dont la bougie complète a été envoyée
+const chargements = {};
+const essaiRejeu = {};
+let boucleRejeu = null;
+export const DEMI_ECART_REJEU = 0.0001; // demi-écart acheteur-vendeur reconstitué (0,01 %)
+
+function bougieA(s, t) {
+  const b = tampons[s];
+  if (!b || !b.length) return null;
+  const i = Math.floor((t - b[0].t) / 60000);
+  if (b[i] && t >= b[i].t && t < b[i].t + 60000) return b[i];
+  return b.find(k => t >= k.t && t < k.t + 60000) || null;
+}
+
+async function remplir(s, t) {
+  if (chargements[s]) return chargements[s];
+  chargements[s] = (async () => {
+    const d = await json(`/api/v3/klines?symbol=${s}&interval=1m&startTime=${Math.floor(t - 120000)}&limit=1000`);
+    tampons[s] = d.map(k => ({ t: k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5], q: +k[7] }));
+    return tampons[s];
+  })().finally(() => { chargements[s] = null; });
+  return chargements[s];
+}
+
+async function statsJour(s, t) {
+  const st = stats24[s];
+  if (st && t - st.maj < 600000) return st;
+  const d = await json(`/api/v3/klines?symbol=${s}&interval=1h&startTime=${Math.floor(t - 864e5)}&endTime=${Math.floor(t)}&limit=25`);
+  if (!d.length) return null;
+  return (stats24[s] = { o: +d[0][1], h: Math.max(...d.map(k => +k[2])), l: Math.min(...d.map(k => +k[3])), q: d.reduce((x, k) => x + +k[7], 0), maj: t });
+}
+
+async function pasRejeu() {
+  if (!enRejeu()) return;
+  const t = tJeu();
+  let ok = 0, erreurs = 0;
+  await Promise.all(CRYPTOS.filter(c => !indisponibles.has(c.s)).map(async c => {
+    const s = c.s;
+    try {
+      let k = bougieA(s, t);
+      const b = tampons[s];
+      if ((!k || !b || t > b[b.length - 1].t - 120000) && !(essaiRejeu[s] > Date.now() - 30000)) {
+        essaiRejeu[s] = Date.now();
+        const neuf = await remplir(s, t);
+        k = bougieA(s, t);
+        if (!neuf.length && !tickers[s]) { indisponibles.add(s); return; } // paire pas encore cotée à cette date
+      }
+      // Trou dans les données (maintenance de la plateforme) : dernier prix connu
+      if (!k) k = (tampons[s] || []).filter(x => x.t <= t).pop();
+      if (!k) return;
+      const st = await statsJour(s, t);
+      const frac = Math.min(1, Math.max(0, (t - k.t) / 60000));
+      const p = k.o + (k.c - k.o) * frac;
+      tickers[s] = { c: p, o: st ? st.o : k.o, h: Math.max(st ? st.h : p, p), l: Math.min(st ? st.l : p, p), q: st ? st.q : k.q, t };
+      if (minuteVue[s] !== undefined && minuteVue[s] !== k.t) {
+        const prec = bougieA(s, k.t - 60000);
+        if (prec) notifier('bougie', s, { t: prec.t, o: prec.o, h: prec.h, l: prec.l, c: prec.c });
+      }
+      minuteVue[s] = k.t;
+      ok++;
+      notifier('tick', s);
+    } catch (e) { erreurs++; }
+  }));
+  const statut = ok ? 'rejeu' : erreurs ? 'hors-ligne' : etat.statut;
+  if (statut !== etat.statut) { etat.statut = statut; notifier('statut'); }
+  etat.dernierTick = Date.now();
+}
+
+async function demarrerRejeu() {
+  etat.statut = 'connexion'; notifier('statut');
+  await pasRejeu();
+  notifier('liste');
+  clearInterval(boucleRejeu);
+  boucleRejeu = setInterval(pasRejeu, 2000);
+}
+
+/** Carnet reconstitué autour du prix rejoué : 100 niveaux de chaque côté. */
+export function carnetSynthetique(p, volumeMinute, tick = 0.01) {
+  const pasPrix = Math.max(tick, p * 0.00002);
+  const q = Math.max(volumeMinute / 40, 500 / p);
+  const bids = [], asks = [];
+  for (let i = 0; i < 100; i++) {
+    bids.push([p * (1 - DEMI_ECART_REJEU) - i * pasPrix, q]);
+    asks.push([p * (1 + DEMI_ECART_REJEU) + i * pasPrix, q]);
+  }
+  return { bids, asks };
 }
 
 // Bougies pour le graphique.
 export async function bougies(symbole, intervalle, limite) {
-  const d = await json(`/api/v3/klines?symbol=${symbole}&interval=${intervalle}&limit=${limite}`);
+  const fin = enRejeu() ? '&endTime=' + Math.floor(tJeu()) : '';
+  const d = await json(`/api/v3/klines?symbol=${symbole}&interval=${intervalle}&limit=${limite}${fin}`);
   return d.map(k => ({ t: k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4] }));
 }
 
@@ -102,12 +219,23 @@ export async function bougiesPeriode(symbole, intervalle, debut, fin) {
 
 // Meilleurs prix d'achat et de vente actuels.
 export async function meilleursPrix(symbole) {
+  if (enRejeu()) {
+    const t = tickers[symbole];
+    if (!t) throw new Error('Prix indisponible');
+    return { bid: t.c * (1 - DEMI_ECART_REJEU), ask: t.c * (1 + DEMI_ECART_REJEU) };
+  }
   const d = await json('/api/v3/ticker/bookTicker?symbol=' + symbole);
   return { bid: +d.bidPrice, ask: +d.askPrice };
 }
 
 // Carnet d'ordres réel au moment de l'ordre.
 export async function carnet(symbole) {
+  if (enRejeu()) {
+    const t = tickers[symbole];
+    if (!t) throw new Error('Prix indisponible');
+    const k = bougieA(symbole, tJeu());
+    return carnetSynthetique(t.c, k ? k.v : 0);
+  }
   const d = await json(`/api/v3/depth?symbol=${symbole}&limit=100`);
   const conv = a => a.map(([p, q]) => [+p, +q]);
   return { bids: conv(d.bids), asks: conv(d.asks) };
