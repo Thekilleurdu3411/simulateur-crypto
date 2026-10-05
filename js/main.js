@@ -8,6 +8,7 @@ import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } f
 import { traiterPeriode, rattraper } from './suivi.js';
 import { noterAchat, noterCession, definirEvaluateur, echeances, deposer } from './jeufisc.js';
 import { valeurDerivesEUR } from './jeufutures.js';
+import { avancerViePartie, changerSituation, annulerChangement } from './jeuvie.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
@@ -34,7 +35,7 @@ const app = {
   saisie: saisieVide(),
   virement: { sens: 'plateforme', montant: '' },
   brouillon: {
-    profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', logement: 'appart', modeVie: 'normal' },
+    profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', experience: 'debutant', anneeApprentissage: 1, logement: 'appart', modeVie: 'normal' },
     difficulte: 'expert',
     capital: DIFFICULTES.expert.capital
   },
@@ -336,6 +337,11 @@ function exporter() {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+function carriere() {
+  const p = partie.profil;
+  return app.carriere || (app.carriere = { situation: p.situation, metier: p.metier || 'Technicien de maintenance', experience: p.experience || 'debutant', annee: p.anneeApprentissage || 1 });
+}
+
 function texteNombre(n, dec) { return String(Math.floor(n * 10 ** dec) / 10 ** dec).replace('.', ','); }
 
 // ---------- Actions ----------
@@ -348,6 +354,18 @@ const actions = {
   },
   'accueil-app': () => changerEcran('lancement'),
   situation: v => { app.brouillon.profil.situation = v; rendre(); },
+  experience: v => { app.brouillon.profil.experience = v; rendre(); },
+  'annee-app': v => { app.brouillon.profil.anneeApprentissage = Number(v); rendre(); },
+  'carriere-sit': v => { carriere().situation = v; rendre(); },
+  'carriere-exp': v => { carriere().experience = v; rendre(); },
+  'carriere-annee': v => { carriere().annee = Number(v); rendre(); },
+  'carriere-valider': () => {
+    const c = carriere();
+    const r = changerSituation(partie, c.situation, c.metier, c.experience, c.annee);
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    app.carriere = null; sauver(partie); rendre(); toast('C\'est noté : changement dans un mois.', 'ok');
+  },
+  'annuler-carriere': () => { annulerChangement(partie); sauver(partie); rendre(); },
   logement: v => { app.brouillon.profil.logement = v; rendre(); },
   'mode-vie': v => { app.brouillon.profil.modeVie = v; rendre(); },
   'vers-partie': () => {
@@ -531,7 +549,8 @@ document.addEventListener('input', ev => {
   const el = ev.target.closest('[data-input]');
   if (!el) return;
   const k = el.dataset.input;
-  if (k.startsWith('profil.')) app.brouillon.profil[k.slice(7)] = el.value;
+  if (k.startsWith('profil.')) { app.brouillon.profil[k.slice(7)] = el.value; if (k === 'profil.metier') rendre(); }
+  else if (k === 'car-metier') { carriere().metier = el.value; rendre(); }
   else if (k === 'capital') {
     app.brouillon.capital = Number(el.value);
     const t = racine.querySelector('[data-capital]');
@@ -609,6 +628,18 @@ rattraperDerives(vuAuDemarrage);
 setInterval(() => preparerMeteo(), 36e5);
 
 let dernierSauvetage = Date.now();
+function avancerVieJeu(depuis) {
+  if (!partie) return;
+  const evts = avancerViePartie(partie);
+  if (evts.length) {
+    sauver(partie);
+    if (depuis) ajouterAbsence(depuis, evts); else toast(evts[evts.length - 1], '');
+    if (app.ecran === 'jeu') rendre();
+  }
+}
+setTimeout(() => avancerVieJeu(vuAuDemarrage), 2500);
+setInterval(() => avancerVieJeu(null), 30000);
+
 function verifierImpots() {
   if (!partie) return;
   const evts = echeances(partie);

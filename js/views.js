@@ -8,6 +8,8 @@ import { valeurParc } from './jeuminage.js';
 import { ongletPerp, valeurFutures } from './views-futures.js';
 import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
+import { sectionVie, apercuProfil } from './views-vie.js';
+import { EXPERIENCES } from './vie.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -167,8 +169,9 @@ export function vueProfil(ctx) {
         <select id="f-metier" data-input="profil.metier">
           ${METIERS.map(([sect, ms]) => `<optgroup label="${e(sect)}">${ms.map(m => `<option ${m === p.metier ? 'selected' : ''}>${e(m)}</option>`).join('')}</optgroup>`).join('')}
         </select></label>
-        <p class="discret" style="font-size:12px">Salaires réels et liste complète de plus de 150 métiers : version 0.9.</p>` : ''}
-      ${p.situation === 'etudiant' ? `<div class="carte" style="font-size:13px;color:var(--texte-2)">Petit revenu mensuel : bourse ou job étudiant, avec peu de temps pour un emploi à côté.</div>` : ''}
+        ${p.situation === 'salarie' ? `<div class="segment sur-fond">${EXPERIENCES.map(([id, nom]) => `<button data-action="experience" data-v="${id}" aria-pressed="${(p.experience || 'debutant') === id}">${nom}</button>`).join('')}</div>` : ''}
+        ${p.situation === 'alternant' ? `<div class="segment sur-fond">${[1, 2, 3].map(a => `<button data-action="annee-app" data-v="${a}" aria-pressed="${Number(p.anneeApprentissage || 1) === a}">${a}${a === 1 ? 're' : 'e'} année</button>`).join('')}</div>` : ''}` : ''}
+      ${p.situation === 'etudiant' ? `<div class="carte" style="font-size:13px;color:var(--texte-2)">Petit revenu : un job étudiant de 10 h par semaine payé au SMIC, environ 420 € par mois.</div>` : ''}
       ${p.situation === 'sans' ? `<div class="carte alerte" style="font-size:13px">Aucun revenu : tout repose sur ton épargne et tes gains crypto. Le mode le plus risqué.</div>` : ''}
     </section>
     <section class="section">
@@ -176,6 +179,7 @@ export function vueProfil(ctx) {
       ${LOGEMENTS.map(l => `<button class="choix" data-action="logement" data-v="${l.id}" aria-pressed="${p.logement === l.id}">
         <span class="t">${l.nom}</span><span class="plus">+ ${l.plus}</span><span class="moins">− ${l.moins}</span></button>`).join('')}
     </section>
+    ${apercuProfil(p)}
     <section class="section">
       <div class="section-titre"><h2>Mode de vie</h2></div>
       <div class="segment sur-fond">
@@ -477,7 +481,7 @@ function ongletFinances(ctx) {
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Compte bancaire</span><span class="badge neutre">Banque</span></div>
       <div class="ligne-kv"><span>Solde</span><span class="num" style="font-size:18px;color:var(--texte)">${eur(partie.banque.solde)}</span></div>
-      <p class="discret" style="font-size:12px">Salaire et dépenses de vie : version 0.9.</p>
+
     </section>
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Plateforme d'échange</span>${pl.statut === 'ouvert' ? '<span class="badge ok"><span class="pt"></span>Ouvert</span>' : ''}</div>
@@ -494,6 +498,7 @@ function ongletFinances(ctx) {
       <button class="bouton" data-action="virer">Virer</button>
       <p class="discret" style="font-size:12px">Virement SEPA instantané, sans frais.</p>
     </section>` : ''}
+    ${sectionVie(ctx)}
     ${sectionImpots(ctx)}
     ${journalHtml(partie, 30)}
     <section class="section">

@@ -31,6 +31,7 @@ export function nouvellePartie({ profil, difficulte, capital }) {
     profil,
     banque: { solde: capital },
     plateforme: { statut: 'aucun', kycFin: null, soldeEUR: 0, actifs: {} },
+    vie: { prochaineEcheance: maintenant + 30.44 * 864e5 / d.temps },
     historique: [{ t: maintenant, type: 'debut', texte: 'Début de la partie en ' + d.nom + ' avec ' + capital.toLocaleString('fr-FR') + ' € en banque' }]
   };
 }

@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.8
+# Simulateur crypto — V0.9
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -20,6 +20,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Installations (V0.6) : puissance du compteur (6, 9, 12 kVA, abonnement réel, prestation Enedis), hébergeurs réels (SAZ Mining, Compass, EZ Blockchain, Terra Hosting) avec envoi, engagement et facture mensuelle, machines à eau chez l'hébergeur.
 - Perpétuels avec levier (V0.7) : BTC, ETH et SOL, marge en USDT, levier selon la difficulté, prix de liquidation, financement toutes les 8 h au taux réel, liquidation possible pendant l'absence (sauf en Investisseur).
 - Fiscalité (V0.8) : méthode française du portefeuille global, seuil de 305 €, flat tax de 31,4 %, minage en micro-BNC, déclaration au printemps et paiement en septembre ; prélevée, automatique ou à remplir soi-même selon la difficulté.
+- Vie quotidienne (V0.9) : salaire selon le métier et l'expérience, grille des apprentis, job étudiant, loyer selon la ville et le logement, courses, forfaits et loisirs selon le mode de vie, découvert avec agios, changement de situation avec un mois de délai.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées

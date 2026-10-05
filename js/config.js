@@ -1,7 +1,7 @@
 // Données fixes du jeu : difficultés, cryptos, profils.
 // Les prix ne sont jamais ici : ils viennent toujours du marché réel.
 
-export const VERSION = '0.8.0';
+export const VERSION = '0.9.0';
 
 // Point d'accès public de Binance réservé aux données de marché (sans compte, sans clé).
 export const API_REST = 'https://data-api.binance.vision';
@@ -73,21 +73,9 @@ export const MODES_VIE = [
   { id: 'confort', nom: 'Confortable' }
 ];
 
-// Première liste de métiers (la liste complète et les salaires réels arrivent avec la V0.9).
-export const METIERS = [
-  ['Industrie et électricité', ['Électricien', 'Technicien de maintenance', 'Électrotechnicien', 'Automaticien', 'Opérateur de production', 'Ingénieur industriel']],
-  ['BTP', ['Maçon', 'Plombier', 'Chef de chantier', 'Conducteur de travaux']],
-  ['Commerce et vente', ['Vendeur', 'Caissier', 'Commercial', 'Responsable de magasin']],
-  ['Restauration et hôtellerie', ['Serveur', 'Cuisinier', 'Réceptionniste']],
-  ['Santé et social', ['Infirmier', 'Aide-soignant', 'Pharmacien', 'Éducateur spécialisé']],
-  ['Transport et logistique', ['Chauffeur routier', 'Cariste', 'Livreur', 'Agent logistique']],
-  ['Informatique et numérique', ['Développeur', 'Technicien support', 'Administrateur réseau', 'Data analyst']],
-  ['Banque et finance', ['Conseiller bancaire', 'Comptable', 'Analyste financier']],
-  ['Enseignement', ['Professeur des écoles', 'Professeur de lycée', 'Formateur']],
-  ['Fonction publique', ['Agent administratif', 'Policier', 'Pompier professionnel']],
-  ['Agriculture', ['Agriculteur', 'Ouvrier agricole', 'Viticulteur']],
-  ['Artisanat', ['Boulanger', 'Coiffeur', 'Menuisier', 'Mécanicien automobile']]
-];
+// Métiers dont le salaire net réel est sourcé (voir js/vie.js et DECISIONS.md).
+import { METIERS_SALAIRES } from './vie.js';
+export const METIERS = METIERS_SALAIRES.map(([secteur, liste]) => [secteur, liste.map(m => m[0])]);
 
 export const INTERVALLES = [
   { id: '15m', nom: '15 min', limite: 96 },

@@ -1,10 +1,10 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre comme une vraie appli.
 // Les données de marché ne sont jamais mises en cache : elles doivent rester réelles.
-const CACHE = 'simcrypto-v0.8.0';
+const CACHE = 'simcrypto-v0.9.0';
 const FICHIERS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/main.js', './js/config.js', './js/market.js', './js/engine.js', './js/state.js',
-  './js/views.js', './js/chart.js', './js/format.js', './js/orders.js', './js/portefeuille.js', './js/suivi.js', './js/minage.js', './js/jeuminage.js', './js/views-minage.js', './js/donnees.js', './js/altcoins.js', './js/futures.js', './js/jeufutures.js', './js/marchefutures.js', './js/views-futures.js', './js/fiscalite.js', './js/jeufisc.js', './js/views-fisc.js',
+  './js/views.js', './js/chart.js', './js/format.js', './js/orders.js', './js/portefeuille.js', './js/suivi.js', './js/minage.js', './js/jeuminage.js', './js/views-minage.js', './js/donnees.js', './js/altcoins.js', './js/futures.js', './js/jeufutures.js', './js/marchefutures.js', './js/views-futures.js', './js/fiscalite.js', './js/jeufisc.js', './js/views-fisc.js', './js/vie.js', './js/jeuvie.js', './js/views-vie.js',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

@@ -136,3 +136,20 @@ Tout peut être changé : il suffit de le demander.
 | Calendrier | Déclaration ouverte le 10 avril, limite le 4 juin (zone des départements 20 à 54), paiement le 15 septembre | Calendrier fiscal 2026 de la Dordogne. |
 | Par difficulté | Découverte : aucun impôt. Investisseur : flat tax prélevée (ou rendue) à chaque vente, minage payé en septembre. Expert : déclaration remplie automatiquement. Réalité : déclaration à remplir soi-même | Tableau des difficultés. |
 | Sanctions en Réalité | Rien déposé à la date limite : + 10 %. Erreur : l'impôt manquant est redressé avec 0,2 % d'intérêts par mois | Majoration de retard et intérêts de retard réels ; le manquement délibéré (40 %) n'est pas simulé. |
+
+## V0.9
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Salariés | Salaire net mensuel au milieu de la fourchette 2026 du métier, selon l'expérience (débutant, confirmé, expérimenté) ; 20 métiers sourcés pour commencer | Sites de salaires (moicombien.fr, salairebrut-en-net.fr). La liste sera élargie métier par métier, avec une source pour chacun. |
+| Métier inconnu | SMIC net (1 477,93 €) | Valeur plancher légale. |
+| Alternants | Grille légale en % du SMIC brut selon l'âge et l'année (27 % à 100 %) ; aucune cotisation jusqu'à 50 % du SMIC, environ 22 % au-delà | Grille officielle des apprentis ; le taux de 22 % est une approximation. |
+| Étudiants | Job étudiant de 10 h par semaine au SMIC, environ 420 € par mois | **Estimation à valider** : bourses et aide des parents non simulées. |
+| Sans emploi | Aucun revenu | Les allocations (chômage, RSA) ne sont pas encore simulées. **À valider.** |
+| Loyer | Loyer moyen d'un T2 dans la ville (Paris 1 602 €, Bordeaux 869 €, Périgueux 480 €…) ; ville absente : 12 €/m² sur 40 m² ; maison avec garage : ×1,8 ; chez les parents : 0 € | Loyers de juillet 2026 (123loger.com) ; le facteur maison est une **estimation à valider**. |
+| Alimentation | 250 / 297 / 375 € par mois selon le mode de vie (économe, normal, confort) ; moitié chez les parents | Budget alimentaire d'une personne seule (Insee). |
+| Autres dépenses | Loisirs 30 / 100 / 250 €, mobile et internet 40 € (15 € chez les parents), assurance habitation 15 €, abonnement électricité selon le compteur | Estimations de marché ; l'abonnement suit le tarif réglementé de la V0.3. |
+| Échéance | Salaire puis dépenses tous les 30,44 jours de jeu, raccourcis par la vitesse du temps de la difficulté (7,6 jours réels en Investisseur ×4) | Cohérence avec la vitesse choisie ; rejoué pendant l'absence. |
+| Découvert | Autorisé, 16 % d'agios par an | Taux courant d'un découvert non autorisé. |
+| Changer de situation | Possible à tout moment depuis Finances ; effectif après un mois de jeu (préavis ou recherche) et annulable avant | Délai réaliste d'un changement d'emploi. |
+| Non simulé pour l'instant | Impôt sur le revenu du salaire, transports, inflation, aides (APL, prime d'activité), allocations chômage | Prochaines étapes de la vie quotidienne. |
