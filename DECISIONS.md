@@ -70,3 +70,20 @@ Tout peut être changé : il suffit de le demander.
 | Bruit | Appartement, machine à air la nuit (22 h à 7 h) : 35 % de risque de plainte par nuit. Investisseur : simple alerte. Expert et Réalité : 3 plaintes = mise en demeure, plus de minage la nuit | Tableau des difficultés (bruit et chaleur). |
 | Revente | Neuve : 70 % du prix neuf, occasion : 85 %, −15 % par an (plancher 30 %), −50 % si en panne, minimum 40 $, puis 10 % de frais de vente ; vente immédiate | Décote rapide du matériel de minage. Simplification : pas de délai d'annonce. |
 | Patrimoine | Les machines comptent à leur valeur de revente (prix payé tant qu'elles sont en livraison) | Ce que tu récupérerais en vendant. |
+
+## V0.5
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Cryptos minables par carte graphique | Ravencoin (KawPow), Ethereum Classic (Etchash), Ergo (Autolykos) | Les plus établies parmi les cryptos minables par carte graphique. |
+| Données réseau | WhatToMine (puissance du réseau, récompense, temps de bloc, cours en BTC) ; formule vérifiée contre ses propres estimations (241,24 RVN par jour pour 3 × RTX 3070) | Source unique et cohérente pour toutes ces cryptos. |
+| Accès à ces données | Fichier `data/altcoins.json` servi par le site, mis à jour chaque heure par une tâche GitHub Actions ; instantané réel du 5 octobre 2026 inclus en attendant | WhatToMine n'autorise probablement pas les appels directs depuis un navigateur. |
+| Performances des cartes | WhatToMine (RTX 3060 Ti, 3070, 4070, 4090, RX 7900 XTX) | Valeurs de référence de la communauté. |
+| Prix des cartes | Prix neufs en France au 15 août 2026 (dropreference.com) | Seule source datée trouvée. |
+| Pièces d'un rig | Châssis 60 €, kit carte mère + processeur + mémoire + SSD 150 €, riser 10 € par carte, alimentation 1 200 W à 220 € (80 % de charge maximale, rendement 92 %), 60 W de base | Estimations courantes ; à ajuster. |
+| Garantie d'un rig | 2 ans | Garantie légale de conformité en France. |
+| Bruit d'un rig | Pas de plainte des voisins | Les cartes graphiques sont bien moins bruyantes qu'un ASIC. |
+| Antminer L9 | 16 GH/s, 3 260 W, 6 500 $ (Kryptex) ; minage fusionné Litecoin + Dogecoin | Fonctionnement réel des ASIC Scrypt. |
+| Pool des autres cryptos | 1 % de commission, versement chaque nuit à minuit UTC, sans seuil | Simplification ; ordre de grandeur des pools publics. |
+| Cryptos non cotées sur la plateforme | Ravencoin, ETC, Ergo s'échangent contre du BTC (0,1 % de frais, minimum 1 €) ; le prix de revient suit | Un échange crypto contre crypto n'est pas imposable en France. |
+| Minage au processeur (Monero) et Kaspa | Reportés | Données réseau prêtes, mais performances des processeurs et prix des ASIC Kaspa pas encore vérifiés. |

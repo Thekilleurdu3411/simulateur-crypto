@@ -248,6 +248,7 @@ export function vueNouvellePartie(ctx) {
 
 // ---------- Jeu ----------
 
+const NOMS_ALT = { RVN: 'Ravencoin', ETC: 'Ethereum Classic', ERG: 'Ergo', XMR: 'Monero', KAS: 'Kaspa' };
 const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Minage'], ['installations', 'Installations'], ['finances', 'Finances']];
 
 export function vueJeu(ctx) {
@@ -306,7 +307,11 @@ function ongletAccueil(ctx) {
       ${actifs.length ? `<div class="carte liste-lignes" style="padding:0 16px;gap:0">
         ${actifs.map(([base, a]) => {
           const c = M.cryptosDisponibles().find(x => x.base === base);
-          return `<button class="rangee" data-action="crypto" data-s="${c ? c.s : ''}">
+          if (!c) return `<div class="rangee">
+            <span style="display:flex;gap:12px;align-items:center;min-width:0"><span class="jeton">${e(base)}</span>
+              <span class="g"><span class="t">${e(NOMS_ALT[base] || base)}</span><span class="s num">${qte(a.qte)} ${e(base)} · ${live('val:' + base, ctx)}</span></span></span>
+            <button class="bouton secondaire petit" style="min-height:36px;padding:0 12px;font-size:13px" data-action="convertir" data-v="${e(base)}">En BTC</button></div>`;
+          return `<button class="rangee" data-action="crypto" data-s="${c.s}">
             <span style="display:flex;gap:12px;align-items:center;min-width:0"><span class="jeton">${e(base)}</span>
               <span class="g"><span class="t">${e(c ? c.nom : base)}</span><span class="s num">${qte(a.qte)} ${e(base)}</span></span></span>
             <span class="d"><span class="num" style="font-size:14px">${live('val:' + base, ctx)}</span><span class="num" style="font-size:12px">${live('pv:' + base, ctx)}</span></span>

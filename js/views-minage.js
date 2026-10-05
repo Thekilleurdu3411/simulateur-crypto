@@ -1,13 +1,43 @@
 // Onglet Minage : parc, pool, contrat électrique, réseau réel, boutique.
-import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
+import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
 import { DIFFICULTES } from './config.js';
 import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
+import { CARTES, COINS_GPU, RIG, FRAIS_POOL_ALT, calculerRig, coinsParSeconde, prixAltEUR } from './altcoins.js';
 import { eur, prix, qte, dateHeure, echapper as e } from './format.js';
 
 const LOGEMENT = { parents: 'Chez tes parents', appart: 'Appartement', maison: 'Maison avec garage' };
 const COULEUR_TXT = { bleu: 'Jour bleu', blanc: 'Jour blanc', rouge: 'Jour rouge' };
 const COULEUR_CLS = { bleu: 'badge neutre', blanc: 'badge attente', rouge: 'badge ko' };
 const n1 = v => v.toFixed(1).replace('.', ',');
+export function fmtHash(h) {
+  if (h >= 1e12) return n1(h / 1e12) + ' TH/s';
+  if (h >= 1e9) return n1(h / 1e9) + ' GH/s';
+  if (h >= 1e6) return n1(h / 1e6) + ' MH/s';
+  return Math.round(h).toLocaleString('fr-FR') + ' H/s';
+}
+// Gains (€) et électricité (€) estimés par jour pour une machine (catalogue ou rig).
+function estimer(md, ctx, mn) {
+  const { partie, D, M } = ctx;
+  const d = DIFFICULTES[partie.difficulte];
+  const r = D.etat.reseau || mn.reseau, alt = D.etat.alt, prixBTC = M.prixDeBase('BTC');
+  if (!prixBTC) return null;
+  let gain = 0;
+  if (md.th && r) gain += btcParSeconde(md.th, r.difficulte, r.recompense, pool(mn.pool).frais, d.minage) * 86400 * prixBTC;
+  for (const pr of md.production || []) {
+    const p = prixAltEUR(pr.coin, alt, prixBTC);
+    if (alt && p) gain += coinsParSeconde(pr.h, alt.coins[pr.coin], FRAIS_POOL_ALT, d.minage) * 86400 * p;
+  }
+  const prixKwh = mn.contrat.type === 'tempo' ? 0.155 : TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6];
+  const cout = md.w / 1000 * 24 * prixKwh * d.elec;
+  return { eur: gain, cout, net: gain - cout };
+}
+function ligneEstimation(est) {
+  return est ? `<div class="ligne-kv" style="font-size:12px"><span>Estimation par jour</span><span class="num ${est.net >= 0 ? 'hausse' : 'baisse'}">${eur(est.eur)} − ${eur(est.cout)} = ${(est.net >= 0 ? '+' : '') + eur(est.net)}</span></div>` : '';
+}
+function puissanceTxt(md) {
+  if (md.th) return md.th + ' TH/s';
+  return (md.production || []).slice(0, 1).map(p => fmtHash(p.h)).join('') ;
+}
 const pc = v => (v * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' %';
 
 export function ongletMinage(ctx, live) {
@@ -50,6 +80,7 @@ function parc(ctx, mn, live) {
         <div><span class="l">Solde au pool</span>${live('pool', ctx, 'v')}</div>
         <div><span class="l">Facture en cours</span>${live('facture', ctx, 'v')}</div>
       </div>
+      ${Object.entries(mn.soldesAlt || {}).filter(([, q]) => q > 0).map(([tag, q]) => `<div class="ligne-kv" style="font-size:13px"><span>En attente au pool</span><span class="num">${q.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${tag}</span></div>`).join('')}
       ${d.aides && th ? `<div class="ligne-kv" style="font-size:13px"><span>Gains attendus</span><span class="num">${qte(gainJour)} BTC/jour${prixBTC ? ' ≈ ' + eur(gainJour * prixBTC) : ''}</span></div>
         <div class="ligne-kv" style="font-size:13px"><span>Électricité</span><span class="num">≈ ${eur(kw * 24 * (mn.contrat.type === 'tempo' ? 0.155 : TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6]) * d.elec)}/jour</span></div>` : ''}
       <p class="discret" style="font-size:12px">Versement par ${e(p.nom)} chaque nuit à minuit UTC dès ${String(p.min).replace('.', ',')} BTC. Facture prélevée sur ta banque le ${e(dateHeure(mn.prochaineFacture).slice(0, 5))}.</p>
@@ -105,7 +136,7 @@ function salle(ctx, mn) {
 }
 
 function machineCarte(m, ctx, live) {
-  const md = modele(m.modele);
+  const md = spec(m);
   const badge = m.statut === 'marche' ? '<span class="badge ok"><span class="pt"></span>En marche</span>'
     : m.statut === 'livraison' ? '<span class="badge attente">En livraison</span>'
     : m.statut === 'panne' ? '<span class="badge ko">En panne</span>'
@@ -115,16 +146,17 @@ function machineCarte(m, ctx, live) {
   const mode = m.mode || 'normal';
   const reglable = ['marche', 'arret'].includes(m.statut);
   return `<article class="carte" style="gap:10px">
-    <div class="ligne-kv"><span class="g" style="display:flex;flex-direction:column;gap:2px"><span class="carte-titre" style="color:var(--texte)">${e(md.nom)}</span><span style="font-size:12px">${md.etat === 'neuf' ? 'Neuve' : 'Occasion reconditionnée'} · achetée ${e(dateHeure(m.acheteLe))}</span></span>${badge}</div>
+    <div class="ligne-kv"><span class="g" style="display:flex;flex-direction:column;gap:2px"><span class="carte-titre" style="color:var(--texte)">${e(md.nom)}</span><span style="font-size:12px">${md.rig ? 'Rig monté' : md.etat === 'neuf' ? 'Neuve' : 'Occasion reconditionnée'} · achetée ${e(dateHeure(m.acheteLe))}</span></span>${badge}</div>
     <div class="grille-3" style="font-size:12px">
-      <div><span class="discret" style="display:block;font-size:11px">Puissance</span><span class="num">${md.th} TH/s</span></div>
+      <div><span class="discret" style="display:block;font-size:11px">Puissance</span><span class="num">${puissanceTxt(md)}</span></div>
       <div><span class="discret" style="display:block;font-size:11px">Conso</span><span class="num">${md.w.toLocaleString('fr-FR')} W</span></div>
-      <div><span class="discret" style="display:block;font-size:11px">Efficacité</span><span class="num">${n1(md.w / md.th)} J/TH</span></div>
+      <div><span class="discret" style="display:block;font-size:11px">${md.th ? 'Efficacité' : 'Mine'}</span><span class="num">${md.th ? n1(md.w / md.th) + ' J/TH' : (md.production || []).map(p => p.coin).join(' + ')}</span></div>
     </div>
     ${m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>` : `
     <div class="ligne-kv" style="font-size:12px"><span>Fonctionnement</span><span class="num">${Math.round(m.heures || 0).toLocaleString('fr-FR')} h · nettoyée il y a ${Math.round(m.heuresDepuisNettoyage || 0)} h</span></div>
     ${(m.santeHash ?? 1) < 1 ? `<div class="ligne-kv" style="font-size:12px"><span>Cartes de hachage</span><span class="baisse">${Math.round((m.santeHash) * 3)} sur 3 en service</span></div>` : ''}
     <div class="ligne-kv" style="font-size:12px"><span>Garantie</span><span>${m.garantieFin && Date.now() < m.garantieFin ? 'jusqu\'au ' + new Date(m.garantieFin).toLocaleDateString('fr-FR') : 'aucune'}</span></div>
+    ${md.rig && reglable ? `<div class="segment">${Object.keys(COINS_GPU).map(c => `<button data-action="rig-crypto" data-v="${m.id}:${c}" aria-pressed="${m.config.coin === c}">${c}</button>`).join('')}</div>` : ''}
     ${reglable ? `<div class="segment">${Object.entries(MODES).map(([id, x]) => `<button data-action="mode" data-v="${m.id}:${id}" aria-pressed="${mode === id}">${x.nom}</button>`).join('')}</div>` : ''}
     ${devis && m.statut !== 'reparation' ? `<div class="carte alerte" style="font-size:13px;padding:10px 12px;gap:6px"><strong>${e(devis.panne.nom)}</strong>
         <span>Réparation : ${eur(devis.cout)}${devis.garantie ? ' (garantie, frais d\'envoi seulement)' : ''}, ${Math.max(1, Math.round(devis.delai / 864e5 * 10) / 10).toString().replace('.', ',')} j sans la machine.</span>
@@ -147,26 +179,56 @@ function boutique(ctx, mn) {
   const prixBTC = M.prixDeBase('BTC');
   const p = pool(mn.pool);
   return `<div class="ligne-kv" style="font-size:13px"><span>Compte bancaire</span><span class="num">${eur(partie.banque.solde)}</span></div>
+    ${constructeurRig(ctx, mn)}
+    <div class="section-titre" style="margin-top:6px"><h2>ASIC</h2></div>
     ${CATALOGUE.map(m => {
       const px = eurUsd ? prixMachineEUR(m, eurUsd) : null;
-      const est = r && d.aides ? estimationJour(m, r, mn.contrat, p.frais, d.minage, d.elec, prixBTC) : null;
+      const est = d.aides ? estimer(m, ctx, mn) : null;
       const bloque = m.refroidissement === 'hydro';
       const jours = LIVRAISON[m.etat].jours / d.temps;
       return `<article class="carte" style="gap:10px">
         <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(m.nom)}</span><span class="badge ${m.etat === 'neuf' ? 'ok' : 'neutre'}">${m.etat === 'neuf' ? 'Neuf' : 'Occasion'}</span></div>
         <div class="grille-3" style="font-size:12px">
-          <div><span class="discret" style="display:block;font-size:11px">Puissance</span><span class="num">${m.th} TH/s</span></div>
+          <div><span class="discret" style="display:block;font-size:11px">Puissance</span><span class="num">${puissanceTxt(m)}</span></div>
           <div><span class="discret" style="display:block;font-size:11px">Conso</span><span class="num">${m.w.toLocaleString('fr-FR')} W</span></div>
-          <div><span class="discret" style="display:block;font-size:11px">Efficacité</span><span class="num">${n1(m.w / m.th)} J/TH</span></div>
+          <div><span class="discret" style="display:block;font-size:11px">${m.th ? 'Efficacité' : 'Mine'}</span><span class="num">${m.th ? n1(m.w / m.th) + ' J/TH' : 'LTC + DOGE'}</span></div>
         </div>
         <div class="ligne-kv"><span>Prix TTC + livraison</span><span class="num" style="color:var(--texte)">${px ? eur(px.total) : '—'}</span></div>
         <div class="ligne-kv" style="font-size:12px"><span>Délai de livraison</span><span>${jours >= 1 ? n1(jours) + ' j' : Math.round(jours * 24) + ' h'}</span></div>
-        ${est ? `<div class="ligne-kv" style="font-size:12px"><span>Estimation par jour</span><span class="num ${est.net >= 0 ? 'hausse' : 'baisse'}">${est.eur != null ? eur(est.eur) : '—'} − ${eur(est.cout)} = ${est.net != null ? (est.net >= 0 ? '+' : '') + eur(est.net) : '—'}</span></div>` : ''}
+        ${ligneEstimation(est)}
         ${bloque ? '<span class="verrou" style="align-self:flex-start">Refroidissement à eau : version 0.6</span>'
           : `<button class="bouton petit" data-action="acheter-machine" data-v="${m.id}" ${partie.profil.logement === 'parents' ? 'disabled' : ''}>Acheter</button>`}
       </article>`;
     }).join('')}
     <p class="discret" style="font-size:12px">Prix publics relevés début octobre 2026, convertis au taux euro-dollar du jour, TVA 20 % incluse. Paiement depuis ton compte bancaire.${d.aides ? '' : ' En Réalité, aucune estimation de rentabilité : à toi de calculer.'}</p>`;
+}
+
+function constructeurRig(ctx, mn) {
+  const { app, partie } = ctx;
+  const d = DIFFICULTES[partie.difficulte];
+  const b = app.rig;
+  const r = calculerRig(b.carte, b.nb, b.coin);
+  const md = { th: 0, w: r.w, production: [{ coin: b.coin, h: r.h }] };
+  const est = d.aides ? estimer(md, ctx, mn) : null;
+  const jours = RIG.livraisonJours / d.temps;
+  return `<section class="carte" style="gap:12px">
+    <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Monter un rig de cartes graphiques</span><span class="badge ok">Neuf</span></div>
+    <div class="puces">${CARTES.map(c => `<button class="puce" data-action="rig-carte" data-v="${c.id}" aria-pressed="${b.carte === c.id}">${e(c.nom)} · ${eur(c.prixEUR).replace(',00', '')}</button>`).join('')}</div>
+    <label class="champ">Nombre de cartes : <strong style="color:var(--texte)" data-rig-nb>${b.nb}</strong>
+      <input id="f-rig-nb" type="range" min="1" max="${RIG.maxCartes}" step="1" value="${b.nb}" data-input="rig-nb"></label>
+    <div class="segment">${Object.keys(COINS_GPU).map(c => `<button data-action="rig-coin" data-v="${c}" aria-pressed="${b.coin === c}">${c}</button>`).join('')}</div>
+    <div class="grille-3" style="font-size:12px">
+      <div><span class="discret" style="display:block;font-size:11px">Puissance</span><span class="num">${fmtHash(r.h)}</span></div>
+      <div><span class="discret" style="display:block;font-size:11px">Conso au mur</span><span class="num">${r.w.toLocaleString('fr-FR')} W</span></div>
+      <div><span class="discret" style="display:block;font-size:11px">Alimentations</span><span class="num">${r.alims} × ${RIG.alim.watts} W</span></div>
+    </div>
+    <div class="ligne-kv" style="font-size:12px"><span>Cartes + châssis, kit, risers, alimentations</span><span class="num">${eur(r.carte.prixEUR * r.nb)} + ${eur(r.prix - r.carte.prixEUR * r.nb)}</span></div>
+    <div class="ligne-kv"><span>Prix total TTC</span><span class="num" style="color:var(--texte)">${eur(r.prix)}</span></div>
+    <div class="ligne-kv" style="font-size:12px"><span>Livraison et montage</span><span>${jours >= 1 ? n1(jours) + ' j' : Math.round(jours * 24) + ' h'}</span></div>
+    ${ligneEstimation(est)}
+    <button class="bouton petit" data-action="acheter-rig" ${partie.profil.logement === 'parents' ? 'disabled' : ''}>Commander le rig</button>
+    <p class="discret" style="font-size:12px">Performances WhatToMine, prix des cartes neuves en France (août 2026). Le rig peut changer de crypto à tout moment.</p>
+  </section>`;
 }
 
 function reseau(ctx, mn) {

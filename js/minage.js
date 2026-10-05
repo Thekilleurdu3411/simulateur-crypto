@@ -1,3 +1,4 @@
+import { specRig, coinsParSeconde } from './altcoins.js';
 // Minage Bitcoin : catalogue réel, pools réels, électricité réelle, calcul des gains.
 // Fonctions de calcul pures (testées) ; les données réseau arrivent de donnees.js.
 
@@ -10,7 +11,9 @@ export const CATALOGUE = [
   { id: 's21xp', nom: 'Antminer S21 XP', th: 270, w: 3645, etat: 'neuf', prixUSD: 3800, refroidissement: 'air', phase: 'mono' },
   { id: 's21xphyd', nom: 'Antminer S21 XP Hydro', th: 473, w: 5676, etat: 'neuf', prixUSD: 6899, refroidissement: 'hydro', phase: 'mono' },
   { id: 's21xpphyd', nom: 'Antminer S21 XP+ Hyd', th: 500, w: 5500, etat: 'neuf', prixUSD: 9500, refroidissement: 'hydro', phase: 'tri' },
-  { id: 's23hyd', nom: 'Antminer S23 Hydro', th: 580, w: 5510, etat: 'neuf', prixUSD: 14299, refroidissement: 'hydro', phase: 'tri' }
+  { id: 's23hyd', nom: 'Antminer S23 Hydro', th: 580, w: 5510, etat: 'neuf', prixUSD: 14299, refroidissement: 'hydro', phase: 'tri' },
+  // ASIC Scrypt : minage fusionné Litecoin + Dogecoin (Kryptex, octobre 2026)
+  { id: 'l9', nom: 'Antminer L9', th: 0, w: 3260, etat: 'neuf', prixUSD: 6500, refroidissement: 'air', phase: 'mono', production: [{ coin: 'LTC', h: 16e9 }, { coin: 'DOGE', h: 16e9 }] }
 ];
 
 // Frais et seuils de versement réels (relevé spark.money, octobre 2026).
@@ -35,6 +38,8 @@ export const RESERVE_FOYER_KVA = 2; // puissance gardée pour le reste du logeme
 export const COMPTEUR = { parents: 6, appart: 6, maison: 9 };
 
 export function modele(id) { return CATALOGUE.find(m => m.id === id); }
+// Caractéristiques d'une machine possédée (catalogue, ou rig calculé à partir de ses cartes).
+export function spec(m) { return m.modele === 'rig' ? specRig(m) : modele(m.modele); }
 export function pool(id) { return POOLS.find(p => p.id === id) || POOLS[0]; }
 
 // Récompense de bloc selon la hauteur (division par deux tous les 210 000 blocs).
@@ -105,11 +110,11 @@ export function avancer(minage, t0, t1, ctx) {
     for (const m of minage.machines) {
       if (m.statut === 'livraison' && m.livraisonLe <= t) {
         m.statut = 'arret';
-        evts.push({ t, texte: `Livraison reçue : ${modele(m.modele).nom}. Tu peux la mettre en marche.` });
+        evts.push({ t, texte: `Livraison reçue : ${spec(m).nom}. Tu peux la mettre en marche.` });
       }
       if (m.statut === 'reparation' && m.reparationFin <= t) {
         m.statut = 'arret'; m.santeHash = 1; m.panne = null;
-        evts.push({ t, texte: `Réparation terminée : ${modele(m.modele).nom} est revenue, prête à redémarrer.` });
+        evts.push({ t, texte: `Réparation terminée : ${spec(m).nom} est revenue, prête à redémarrer.` });
       }
     }
 
@@ -121,16 +126,16 @@ export function avancer(minage, t0, t1, ctx) {
     const actives = bridageNuit ? [] : minage.machines.filter(m => m.statut === 'marche');
 
     // Température de la pièce et bridage thermique (machines refroidies par air)
-    const kwNominal = actives.reduce((s, m) => s + modele(m.modele).w * MODES[m.mode || 'normal'].w, 0) / 1000;
+    const kwNominal = actives.reduce((s, m) => s + spec(m).w * MODES[m.mode || 'normal'].w, 0) / 1000;
     const tExt = ctx.temperature ? ctx.temperature(t) : null;
     const T = temperaturePiece(ctx.logement, minage.ventilation, tExt, kwNominal);
     const f = facteurChaleur(T);
     minage.temperature = T;
-    const th = actives.reduce((s, m) => s + modele(m.modele).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1), 0) * f;
+    const th = actives.reduce((s, m) => s + spec(m).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1), 0) * f;
     const kw = kwNominal * (T > 40 ? 0.5 : 1);
 
     // Bruit : une machine à air qui tourne la nuit en appartement
-    if (nuit && appart && actives.length) minage.nuitBruyante = true;
+    if (nuit && appart && actives.some(m => spec(m).bruyant !== false)) minage.nuitBruyante = true;
     const hFin = paris(fin).heure;
     if (h < 7 && hFin >= 7) {
       if (minage.nuitBruyante) evts.push(...nuitDeBruit(minage, ctx, fin));
@@ -142,7 +147,7 @@ export function avancer(minage, t0, t1, ctx) {
       m.heures = (m.heures || 0) + dt / 3600;
       m.heuresDepuisNettoyage = (m.heuresDepuisNettoyage || 0) + dt / 3600;
       if (!ctx.rng || !ctx.pannes) continue;
-      const md = modele(m.modele);
+      const md = spec(m);
       const parHeure = (md.etat === 'neuf' ? 0.06 : 0.15) / 8760
         * (T > 35 ? 3 : T > 30 ? 1.5 : 1)
         * MODES[m.mode || 'normal'].usure
@@ -151,6 +156,16 @@ export function avancer(minage, t0, t1, ctx) {
       if (ctx.rng() < parHeure * dt / 3600) evts.push(declencherPanne(m, ctx.rng(), fin));
     }
 
+    // Autres cryptos (rigs GPU, ASIC Scrypt) : gains à partir de la part de la puissance du réseau
+    if (ctx.alt) {
+      for (const m of actives) {
+        for (const pr of spec(m).production || []) {
+          const g = coinsParSeconde(pr.h * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1) * f, ctx.alt.coins[pr.coin], undefined, ctx.multMinage) * dt;
+          minage.soldesAlt = minage.soldesAlt || {};
+          minage.soldesAlt[pr.coin] = (minage.soldesAlt[pr.coin] || 0) + g;
+        }
+      }
+    }
     if (th && ctx.reseau && ctx.reseau.difficulte) {
       const gain = btcParSeconde(th, ctx.reseau.difficulte, ctx.reseau.recompense, p.frais, ctx.multMinage) * dt;
       minage.soldePool += gain;
@@ -165,6 +180,14 @@ export function avancer(minage, t0, t1, ctx) {
     t = fin;
 
     // Versement quotidien du pool à minuit UTC
+    if (t === minuitUTC && ctx.peutRecevoir && minage.soldesAlt) {
+      for (const [tag, q] of Object.entries(minage.soldesAlt)) {
+        if (q <= 0) continue;
+        minage.soldesAlt[tag] = 0;
+        ctx.payer(tag, q, t);
+        evts.push({ t, texte: `Pool : ${q.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${tag} versés sur ta plateforme` });
+      }
+    }
     if (t === minuitUTC && minage.soldePool >= p.min && ctx.peutRecevoir) {
       const q = minage.soldePool;
       minage.soldePool = 0;
@@ -215,7 +238,7 @@ function declencherPanne(m, tirage, t) {
   m.panne = { type: p.type, depuis: t };
   if (p.arret) m.statut = 'panne';
   else m.santeHash = Math.max(1 / 3, (m.santeHash ?? 1) - 1 / 3);
-  return { t, texte: `Panne : ${p.nom} sur ${modele(m.modele).nom}` + (p.arret ? ' (machine arrêtée)' : ' (elle tourne à puissance réduite)'), panne: true };
+  return { t, texte: `Panne : ${p.nom} sur ${spec(m).nom}` + (p.arret ? ' (machine arrêtée)' : ' (elle tourne à puissance réduite)'), panne: true };
 }
 
 function nuitDeBruit(minage, ctx, t) {
@@ -234,8 +257,9 @@ export function infosPanne(m) { return m.panne ? PANNES.find(p => p.type === m.p
 
 // Valeur de revente d'une machine sur le marché de l'occasion, en dollars.
 export function valeurReventeUSD(m) {
-  const md = modele(m.modele);
-  const base = md.etat === 'neuf' ? md.prixUSD * 0.7 : md.prixUSD * 0.85;
+  const md = spec(m);
+  const prix = md.rig ? md.prixEUR * (m.eurUsdAchat || 1.17) / 1.2 : md.prixUSD;
+  const base = md.etat === 'neuf' ? prix * 0.7 : prix * 0.85;
   const ans = (Date.now() - m.acheteLe) / (365 * 864e5);
   const etat = m.statut === 'panne' || (m.santeHash ?? 1) < 1 ? 0.5 : 1;
   return Math.max(40, base * Math.max(0.3, 1 - 0.15 * ans) * etat);

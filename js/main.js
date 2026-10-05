@@ -9,6 +9,8 @@ import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
+import { acheterRig, changerCrypto, convertirEnBTC } from './jeuminage.js';
+import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
 import { modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES } from './minage.js';
 import { eur, prix, qte, pct, duree } from './format.js';
@@ -38,13 +40,18 @@ const app = {
   graph: null,
   graphErreur: false,
   absence: null,
-  sousMinage: 'parc'
+  sousMinage: 'parc',
+  rig: { carte: '3070', nb: 6, coin: 'RVN' }
 };
+
+// Prix en euros de toute crypto : cours de la plateforme, sinon cours WhatToMine converti.
+function prixEUR(base) { return M.prixDeBase(base) ?? prixAltEUR(base, D.etat.alt, M.prixDeBase('BTC')); }
+const marche = { ...M, prixDeBase: prixEUR };
 
 function ctx() {
   const cj = jourTempo(Date.now()), cd = jourTempo(Date.now() + 864e5);
   const cache = partie?.minage?.couleurs || {};
-  return { app, partie, M, D, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
+  return { app, partie, M: marche, D, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
 }
 function difficulte() { return DIFFICULTES[partie.difficulte]; }
 
@@ -259,7 +266,7 @@ function ajouterAbsence(depuis, evenements) {
 // Minage : fait avancer gains, factures et livraisons jusqu'à maintenant.
 function avancerMinage(absence = false) {
   if (!partie || !partie.minage) return [];
-  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), temperature: D.temperatureExterieure, absence });
+  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), prixEUR, alt: D.etat.alt, temperature: D.temperatureExterieure, absence });
 }
 
 // Météo réelle de la ville du joueur (pour la température de la pièce).
@@ -372,6 +379,22 @@ const actions = {
     if (annulerOrdre(partie, id)) { sauver(partie); rendre(); toast('Ordre annulé, fonds débloqués.', 'ok'); }
   },
   'fermer-absence': () => { app.absence = null; rendre(); },
+  'rig-carte': v => { app.rig.carte = v; rendre(); },
+  'rig-coin': v => { app.rig.coin = v; rendre(); },
+  'acheter-rig': () => {
+    const b = app.rig, r = calculerRig(b.carte, b.nb, b.coin), d = DIFFICULTES[partie.difficulte];
+    confirmer('Commander ce rig ?', `${b.nb} × ${r.carte.nom}, ${r.alims} alimentation${r.alims > 1 ? 's' : ''}, châssis et kit : ${eur(r.prix)} prélevés sur ta banque.`, 'Commander', () => {
+      const res = acheterRig(partie, b.carte, b.nb, b.coin, D.etat.eurUsd);
+      if (res.erreur) return toast(res.erreur, 'erreur');
+      sauver(partie); app.sousMinage = 'parc'; rendre(); toast('Rig commandé.', 'ok');
+    });
+  },
+  'rig-crypto': v => { const [id, coin] = v.split(':'); avancerMinage(); const r = changerCrypto(partie, id, coin); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  convertir: tag => {
+    const r = convertirEnBTC(partie, tag, prixEUR(tag), M.prixDeBase('BTC'));
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    sauver(partie); rendre(); toast('Échangé contre ' + qte(r.btc) + ' BTC', 'ok');
+  },
   'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
   'acheter-machine': id => {
     const m = modele(id), d = DIFFICULTES[partie.difficulte];
@@ -442,7 +465,10 @@ document.addEventListener('input', ev => {
   }
   else if (k in app.saisie) { app.saisie[k] = el.value; majLive(); }
   else if (k === 'virement') app.virement.montant = el.value;
+  else if (k === 'rig-nb') { app.rig.nb = Number(el.value); const t = racine.querySelector('[data-rig-nb]'); if (t) t.textContent = el.value; }
 });
+
+document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.input === 'rig-nb') rendre(); });
 
 // ---------- Démarrage ----------
 

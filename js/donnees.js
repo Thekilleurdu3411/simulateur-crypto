@@ -6,7 +6,7 @@ const MEMPOOL = 'https://mempool.space/api';
 const TEMPO = 'https://www.api-couleur-tempo.fr/api/jourTempo/';
 const COULEURS = { 1: 'bleu', 2: 'blanc', 3: 'rouge' };
 
-export const etat = { reseau: null, eurUsd: null, couleurs: {}, tempoDispo: null };
+export const etat = { reseau: null, eurUsd: null, couleurs: {}, tempoDispo: null, alt: null };
 const ecouteurs = new Set();
 export function ecouter(f) { ecouteurs.add(f); }
 function notifier() { for (const f of ecouteurs) f(); }
@@ -58,10 +58,17 @@ export async function chargerTempo(dates) {
   return etat.couleurs;
 }
 
+// Réseaux des autres cryptos minables : fichier du site, actualisé chaque heure par GitHub Actions.
+export async function chargerAltcoins() {
+  const d = await json('./data/altcoins.json');
+  if (d && d.coins) etat.alt = d;
+  return etat.alt;
+}
+
 export async function demarrer() {
-  await Promise.allSettled([chargerReseau(), chargerEurUsd()]);
+  await Promise.allSettled([chargerReseau(), chargerEurUsd(), chargerAltcoins()]);
   notifier();
-  setInterval(() => { Promise.allSettled([chargerReseau(), chargerEurUsd()]).then(notifier); }, 10 * 60000);
+  setInterval(() => { Promise.allSettled([chargerReseau(), chargerEurUsd(), chargerAltcoins()]).then(notifier); }, 10 * 60000);
 }
 
 // ---------- Météo réelle (Open-Meteo, gratuit et sans clé) ----------
