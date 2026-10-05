@@ -181,3 +181,16 @@ Tout peut être changé : il suffit de le demander.
 | Flat tax | 30 % pour les revenus jusqu'à 2024, 31,4 % à partir de 2025 | Hausse de la CSG sur les revenus du patrimoine. |
 | Tranche d'imposition du minage | Calculée à partir du salaire (barème des revenus 2025, abattement de 10 %, apprentis et jobs étudiants exonérés jusqu'au SMIC annuel), au lieu d'une valeur supposée | Les revenus existent depuis la V0.9. |
 | Mode rejeu accéléré | Pas encore : le marché rejoue au rythme réel | Le « mode bonus » accéléré viendra ensuite. **À préciser avec toi.** |
+
+## V0.12
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Métiers | 132 métiers dans 15 secteurs (Transport et logistique, Hôtellerie-restauration, Agriculture, Banque-finance-assurance, Communication et arts, Droit, Sport et animation en plus) | Demande : palette très étendue. Sources ci-dessous. |
+| Sources des salaires ajoutés | travail-industrie.com et salairebrut-en-net.fr (simulateurs 2026), fiche-paie.fr, grilles de la fonction publique hospitalière et territoriale, justice.gouv.fr (surveillants, janvier 2026), pass-education.fr (certifiés), conventions collectives du sport et de l'animation | Données 2026. Brut converti en net à 78 % dans le privé. |
+| Limites connues | Sites agrégateurs, pas des statistiques officielles. ATSEM, militaire du rang, surveillant pénitentiaire : hors primes. Médecin généraliste : grille de praticien hospitalier. Avocat, agent immobilier, pilote de ligne : très variables (rétrocession, commissions, hors indemnités). Secrétaire et orthophoniste : fourchettes construites autour d'une valeur par niveau. Esthéticien : source sous le SMIC, ramenée à 1 480 € | **À valider** si un métier te semble faux. |
+| Impôt sur le salaire | Prélevé chaque mois : barème des revenus 2025 (0 / 11 / 30 / 41 / 45 %), abattement de 10 %, une part, décote (897 € − 45,25 % de l'impôt sous 1 982 €) ; apprentis et jobs étudiants exonérés jusqu'au SMIC annuel ; supprimé si les impôts sont désactivés | Loi de finances 2026 ; seuils de la décote **à vérifier**. |
+| RSA | 651,69 € par mois dès 25 ans sans salaire (décret 2026-220, 1er avril 2026), moins 12 % si logé gratuitement chez ses parents | Réalité : « sans emploi » n'est plus sans aucun revenu. |
+| Prime d'activité | Forfait 638,28 € + 61 % du salaire + bonification jusqu'à 240,63 € (entre 0,5 et 1,15 SMIC, réforme d'avril 2026) − le plus grand du forfait et du salaire ; non versée sous 15 € ; apprentis et étudiants seulement au-delà de 78 % du SMIC | Barème CAF 2026 (previssima.fr, journaldeleconomie.fr). Au SMIC : environ 240 €. |
+| Non simulé | APL (dépend du zonage et des loyers plafonds), allocations chômage (aucune après une démission de toute façon), bourses étudiantes | **À valider** : je peux ajouter l'APL ensuite. |
+| Transports | En commun : passe Navigo 90,80 € à Paris, 50 € ailleurs (estimation), remboursé à moitié par l'employeur (ou tarif étudiant) ; voiture déjà possédée : 208 € par mois (carburant 119 €, assurance 45 €, entretien 44 €, fiches-auto.fr 2025) ; vélo 10 € ; à pied 0 € ; modifiable à tout moment | Coûts moyens réels ; achat de voiture non simulé. |

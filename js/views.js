@@ -11,7 +11,7 @@ import { sectionImpots } from './views-fisc.js';
 import { sectionVie, apercuProfil } from './views-vie.js';
 import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
-import { EXPERIENCES } from './vie.js';
+import { EXPERIENCES, TRANSPORTS } from './vie.js';
 import { maintenant as tJeu, enRejeu } from './horloge.js';
 
 const ICONES = {
@@ -176,7 +176,11 @@ export function vueProfil(ctx) {
         ${p.situation === 'salarie' ? `<div class="segment sur-fond">${EXPERIENCES.map(([id, nom]) => `<button data-action="experience" data-v="${id}" aria-pressed="${(p.experience || 'debutant') === id}">${nom}</button>`).join('')}</div>` : ''}
         ${p.situation === 'alternant' ? `<div class="segment sur-fond">${[1, 2, 3].map(a => `<button data-action="annee-app" data-v="${a}" aria-pressed="${Number(p.anneeApprentissage || 1) === a}">${a}${a === 1 ? 're' : 'e'} année</button>`).join('')}</div>` : ''}` : ''}
       ${p.situation === 'etudiant' ? `<div class="carte" style="font-size:13px;color:var(--texte-2)">Petit revenu : un job étudiant de 10 h par semaine payé au SMIC, environ 420 € par mois.</div>` : ''}
-      ${p.situation === 'sans' ? `<div class="carte alerte" style="font-size:13px">Aucun revenu : tout repose sur ton épargne et tes gains crypto. Le mode le plus risqué.</div>` : ''}
+      ${p.situation === 'sans' ? `<div class="carte alerte" style="font-size:13px">Aucun salaire : le RSA (651,69 € par mois, dès 25 ans) et ton épargne. Avant 25 ans, aucun revenu. Le mode le plus risqué.</div>` : ''}
+    </section>
+    <section class="section">
+      <div class="section-titre"><h2>Transport</h2></div>
+      <div class="puces">${TRANSPORTS.map(([id, nom]) => `<button class="puce" data-action="transport" data-v="${id}" aria-pressed="${(p.transport || 'commun') === id}">${nom}</button>`).join('')}</div>
     </section>
     <section class="section">
       <div class="section-titre"><h2>Logement</h2></div>

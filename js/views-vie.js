@@ -1,6 +1,6 @@
 // Section « Vie quotidienne » de l'onglet Finances.
-import { SITUATIONS, METIERS } from './config.js';
-import { salaireNet, depenses, EXPERIENCES, loyer } from './vie.js';
+import { SITUATIONS, METIERS, reglesDe } from './config.js';
+import { salaireNet, depenses, EXPERIENCES, loyer, prestations, TRANSPORTS, impotRevenu } from './vie.js';
 import { vieDe, periode } from './jeuvie.js';
 import { COMPTEUR } from './minage.js';
 import { eur, dateHeure, echapper as e } from './format.js';
@@ -10,20 +10,27 @@ export function sectionVie(ctx) {
   const p = partie.profil;
   const v = vieDe(partie);
   const kva = partie.minage ? partie.minage.contrat.kva : (COMPTEUR[p.logement] || 6);
-  const sal = salaireNet(p);
-  const dep = depenses(p, kva);
+  const sal0 = salaireNet(p);
+  const aides = prestations(p);
+  const sal = sal0 + aides.reduce((s, a) => s + a.montant, 0);
+  const dep = depenses(p, kva, { impot: reglesDe(partie).impots !== 'off' });
   const total = dep.reduce((s, d) => s + d.montant, 0);
   const jours = periode(partie) / 864e5;
   const c = app.carriere || { situation: p.situation, metier: p.metier || METIERS[0][1][0], experience: p.experience || 'debutant', annee: p.anneeApprentissage || 1 };
   const situationTxt = SITUATIONS.find(s => s.id === p.situation)?.nom + (p.metier && (p.situation === 'salarie' || p.situation === 'alternant') ? ' · ' + p.metier : '');
   return `<section class="section"><div class="section-titre"><h2>Vie quotidienne</h2><span class="discret" style="font-size:12px">${jours >= 29 ? 'chaque mois' : 'tous les ' + jours.toFixed(1).replace('.', ',') + ' jours'}</span></div>
     <div class="carte" style="gap:8px">
-      <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(situationTxt)}</span><span class="num hausse">${sal ? '+' + eur(sal) : '0,00 €'}</span></div>
+      <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(situationTxt)}</span><span class="num hausse">${sal0 ? '+' + eur(sal0) : '0,00 €'}</span></div>
+      ${aides.map(a => `<div class="ligne-kv" style="font-size:13px"><span>${e(a.nom)} (CAF)</span><span class="num hausse">+${eur(a.montant)}</span></div>`).join('')}
       ${dep.map(d => `<div class="ligne-kv" style="font-size:13px"><span>${e(d.nom)}</span><span class="num">−${eur(d.montant)}</span></div>`).join('')}
       <div class="ligne-kv" style="border-top:1px solid var(--ligne);padding-top:8px"><span>Reste ${jours >= 29 ? 'par mois' : 'par échéance'}</span><span class="num ${sal - total >= 0 ? 'hausse' : 'baisse'}">${(sal - total >= 0 ? '+' : '') + eur(sal - total)}</span></div>
       <div class="ligne-kv" style="font-size:12px"><span>Prochaine échéance</span><span>${e(dateHeure(v.prochaineEcheance))}</span></div>
       ${v.changement ? `<div class="carte info" style="font-size:13px;padding:10px 12px;gap:6px"><span>${e(v.changement.texte)} Le ${e(dateHeure(v.changement.le))}.</span><button class="lien" style="align-self:flex-start" data-action="annuler-carriere">Annuler</button></div>` : ''}
-      <p class="discret" style="font-size:12px">Salaires nets 2026 (milieu de fourchette), SMIC du 1er juin 2026, loyer moyen d'un T2 dans ta ville, alimentation selon l'Insee. Un découvert coûte 16 % par an d'agios.</p>
+      <p class="discret" style="font-size:12px">Salaires nets 2026 (milieu de fourchette), SMIC du 1er juin 2026, loyer moyen d'un T2 dans ta ville, alimentation selon l'Insee. Impôt sur le salaire au barème 2026 pour une personne seule. Un découvert coûte 16 % par an d'agios.</p>
+    </div>
+    <div class="carte" style="gap:10px">
+      <div class="carte-titre">Transport</div>
+      <div class="puces">${TRANSPORTS.map(([id, nom]) => `<button class="puce" data-action="transport-vie" data-v="${id}" aria-pressed="${(p.transport || 'commun') === id}">${nom}</button>`).join('')}</div>
     </div>
     <div class="carte" style="gap:10px">
       <div class="carte-titre">Changer de situation</div>
@@ -41,7 +48,9 @@ export function sectionVie(ctx) {
 export function apercuProfil(p) {
   return `<div class="carte" style="gap:6px;font-size:13px">
     <div class="ligne-kv"><span>Revenu net mensuel</span><span class="num" style="color:var(--texte)">${eur(salaireNet(p))}</span></div>
+    ${prestations(p).map(a => `<div class="ligne-kv"><span>${e(a.nom)}</span><span class="num" style="color:var(--texte)">+${eur(a.montant)}</span></div>`).join('')}
+    ${impotRevenu(p) ? `<div class="ligne-kv"><span>Impôt sur le revenu</span><span class="num" style="color:var(--texte)">−${eur(impotRevenu(p) / 12)}/mois</span></div>` : ''}
     <div class="ligne-kv"><span>Loyer mensuel</span><span class="num" style="color:var(--texte)">${eur(loyer(p))}</span></div>
-    <p class="discret" style="font-size:12px">Salaires nets 2026, grille légale des apprentis, loyers moyens de juillet 2026. Ville non répertoriée : 12 €/m².</p>
+    <p class="discret" style="font-size:12px">Salaires nets 2026, grille légale des apprentis, RSA et prime d'activité d'avril 2026, loyers moyens de juillet 2026. Ville non répertoriée : 12 €/m².</p>
   </div>`;
 }

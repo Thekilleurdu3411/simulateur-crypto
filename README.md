@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.11
+# Simulateur crypto — V0.12
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -23,6 +23,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Vie quotidienne (V0.9) : salaire selon le métier et l'expérience, grille des apprentis, job étudiant, loyer selon la ville et le logement, courses, forfaits et loisirs selon le mode de vie, découvert avec agios, changement de situation avec un mois de délai.
 - Réglages avancés (V0.10) : douze réglages libres avant de lancer la partie (vitesse du temps, minage, électricité, frais, pannes, levier, impôts…) ; au moindre changement, la partie devient « Personnalisée » avec son propre classement.
 - Date de départ libre (V0.11) : la partie peut commencer n'importe quel jour depuis le 5 janvier 2020 ; le marché rejoue les vraies bougies minute par minute, avec le réseau Bitcoin, la météo, l'euro-dollar et les jours Tempo de l'époque, et seules les machines déjà sorties.
+- Vie plus complète (V0.12) : 132 métiers sourcés, impôt sur le salaire prélevé à la source, RSA et prime d'activité, transports (en commun, voiture, vélo, à pied).
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées

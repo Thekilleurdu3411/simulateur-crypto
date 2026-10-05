@@ -16,7 +16,7 @@ export function vieDe(partie) {
 export function avancerViePartie(partie, maintenant = tJeu()) {
   const v = vieDe(partie);
   const kva = partie.minage ? partie.minage.contrat.kva : (COMPTEUR[partie.profil.logement] || 6);
-  const evts = avancerVie(v, partie.banque, partie.profil, v.dernierCalcul, maintenant, periode(partie), kva);
+  const evts = avancerVie(v, partie.banque, partie.profil, v.dernierCalcul, maintenant, periode(partie), kva, { impot: reglesDe(partie).impots !== 'off' });
   v.dernierCalcul = maintenant;
   for (const e of evts) partie.historique.unshift({ t: e.t, type: 'vie', texte: e.texte });
   if (evts.length) partie.historique.sort((a, b) => b.t - a.t);

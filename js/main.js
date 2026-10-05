@@ -11,6 +11,7 @@ import { traiterPeriode, rattraper } from './suivi.js';
 import { noterAchat, noterCession, definirEvaluateur, echeances, deposer } from './jeufisc.js';
 import { valeurDerivesEUR } from './jeufutures.js';
 import { avancerViePartie, changerSituation, annulerChangement } from './jeuvie.js';
+import { TRANSPORTS } from './vie.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
@@ -39,7 +40,7 @@ const app = {
   saisie: saisieVide(),
   virement: { sens: 'plateforme', montant: '' },
   brouillon: {
-    profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', experience: 'debutant', anneeApprentissage: 1, logement: 'appart', modeVie: 'normal' },
+    profil: { prenom: '', nom: '', age: '', ville: '', situation: 'alternant', metier: 'Technicien de maintenance', experience: 'debutant', anneeApprentissage: 1, logement: 'appart', modeVie: 'normal', transport: 'commun' },
     difficulte: 'expert',
     capital: DIFFICULTES.expert.capital,
     reglages: {},
@@ -396,6 +397,8 @@ const actions = {
   },
   'annuler-carriere': () => { annulerChangement(partie); sauver(partie); rendre(); },
   logement: v => { app.brouillon.profil.logement = v; rendre(); },
+  transport: v => { app.brouillon.profil.transport = v; rendre(); },
+  'transport-vie': v => { if (!partie) return; partie.profil.transport = v; journal(partie, 'vie', 'Transport : ' + (TRANSPORTS.find(t => t[0] === v) || [, v])[1]); sauver(partie); rendre(); },
   'mode-vie': v => { app.brouillon.profil.modeVie = v; rendre(); },
   'vers-partie': () => {
     const p = app.brouillon.profil;
