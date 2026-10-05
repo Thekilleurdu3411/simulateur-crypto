@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.7
+# Simulateur crypto — V0.8
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -19,6 +19,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Autres cryptos (V0.5) : rigs de cartes graphiques à monter soi-même (RTX 3060 Ti à RTX 4090, RX 7900 XTX) sur Ravencoin, Ethereum Classic ou Ergo, Antminer L9 en minage fusionné Litecoin + Dogecoin, échange des cryptos minées contre du BTC.
 - Installations (V0.6) : puissance du compteur (6, 9, 12 kVA, abonnement réel, prestation Enedis), hébergeurs réels (SAZ Mining, Compass, EZ Blockchain, Terra Hosting) avec envoi, engagement et facture mensuelle, machines à eau chez l'hébergeur.
 - Perpétuels avec levier (V0.7) : BTC, ETH et SOL, marge en USDT, levier selon la difficulté, prix de liquidation, financement toutes les 8 h au taux réel, liquidation possible pendant l'absence (sauf en Investisseur).
+- Fiscalité (V0.8) : méthode française du portefeuille global, seuil de 305 €, flat tax de 31,4 %, minage en micro-BNC, déclaration au printemps et paiement en septembre ; prélevée, automatique ou à remplir soi-même selon la difficulté.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -78,6 +79,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/views-minage.js` | Écrans du minage |
 | `js/futures.js`, `js/jeufutures.js`, `js/marchefutures.js`, `js/views-futures.js` | Perpétuels : calculs (testés), règles, données, écran |
 | `data/altcoins.json`, `scripts/maj-altcoins.mjs` | Données réseau des autres cryptos, mises à jour chaque heure par GitHub Actions |
+| `js/fiscalite.js`, `js/jeufisc.js`, `js/views-fisc.js` | Fiscalité : calculs (testés), déclarations, écran |
 | `js/state.js` | Sauvegarde locale et règles de la partie |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
@@ -86,9 +88,8 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.8 Fiscalité.
-2. V0.9 Vie quotidienne, métiers complets et date de départ libre.
-3. V1.0 Notifications et synchro entre appareils.
+1. V0.9 Vie quotidienne, métiers complets et date de départ libre.
+2. V1.0 Notifications et synchro entre appareils.
 
 ## Décisions
 

@@ -3,6 +3,7 @@ import { HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur, prixHebergeurEUR, s
 import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD } from './minage.js';
 import { DIFFICULTES } from './config.js';
 import { journal } from './state.js';
+import { noterMinage } from './jeufisc.js';
 import { calculerRig, COINS_GPU, RIG } from './altcoins.js';
 import { eur } from './format.js';
 
@@ -101,6 +102,7 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
       const valeur = p ? q * p : 0;
       a.qte += q; a.cout += valeur; // prix de revient = valeur au moment de la réception
       (partie.revenusMinage || (partie.revenusMinage = [])).push({ t, coin: base, qte: q, eur: valeur });
+      noterMinage(partie, valeur, t);
     }
   });
   mn.dernierCalcul = maintenant;

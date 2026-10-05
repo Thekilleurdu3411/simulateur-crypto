@@ -3,6 +3,7 @@ import { reserveAchat } from './orders.js';
 import { journal } from './state.js';
 import { eur, prix as fp, qte as fq } from './format.js';
 import { descriptionOrdre } from './orders.js';
+import { noterAchat, noterCession } from './jeufisc.js';
 
 function actif(pl, base) { return pl.actifs[base] || (pl.actifs[base] = { qte: 0, cout: 0 }); }
 function nettoyer(pl, base) { const a = pl.actifs[base]; if (a && a.qte <= 1e-12) delete pl.actifs[base]; }
@@ -85,10 +86,12 @@ export function executerOrdre(partie, o, px, tauxFrais, t) {
     pl.soldeEUR += o.reserve.eur - montant; // rend la part non utilisée
     const a = actif(pl, o.base);
     a.qte += o.qte - frais; a.cout += montant;
+    noterAchat(partie, montant, t);
     texte = `Ordre exécuté : achat de ${fq(o.qte - frais)} ${o.base} à ${fp(px)} € (${eur(montant)})`;
   } else {
     const recu = montant * (1 - tauxFrais);
     const pv = encaisserVente(partie, o.base, o.qte, recu, o.reserve.cout, t);
+    noterCession(partie, recu, t);
     texte = `Ordre exécuté : vente de ${fq(o.qte)} ${o.base} à ${fp(px)} € (${eur(recu)} reçus, ${pv >= 0 ? 'plus' : 'moins'}-value ${eur(Math.abs(pv))})`;
   }
   partie.historique.unshift({ t, type: o.sens === 'achat' ? 'achat' : 'vente', texte });

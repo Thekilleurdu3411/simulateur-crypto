@@ -118,3 +118,21 @@ Tout peut être changé : il suffit de le demander.
 | Expert et Réalité | Liquidation possible pendant l'absence, rejouée avec les vraies bougies de prix de marque | Réalisme. |
 | Exécution | Au marché uniquement (meilleur prix), sans glissement sur le carnet | Simplification de cette première version. |
 | Cadre légal | Non simulé | L'accès des particuliers européens aux dérivés crypto dépend des plateformes et de la réglementation. |
+
+## V0.8
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Calcul des plus-values | Méthode du portefeuille global (article 150 VH bis, formulaire 2086) : plus-value = prix de cession − prix total d'acquisition × prix de cession ÷ valeur globale du portefeuille ; le prix d'acquisition consommé est retiré à chaque vente | Règle française ; vérifiée sur l'exemple publié (10 000 € investis, portefeuille à 50 000 €, vente de 5 000 € : 4 000 € de plus-value). |
+| Valeur globale du portefeuille | Toutes les cryptos du joueur : plateforme, ordres en attente, soldes des pools, marge des perpétuels | Le fisc demande la valeur de l'ensemble des actifs numériques. |
+| Ventes rejouées pendant l'absence | Valeur globale calculée aux prix du moment du rattrapage | Les prix de toutes les cryptos à l'instant passé ne sont pas tous rechargés ; approximation. |
+| Frais | Déduits du prix de cession, ajoutés au prix d'acquisition | Règle de l'article 150 VH bis. |
+| Taux | Flat tax de 31,4 % (12,8 % + 18,6 % de prélèvements sociaux) | Taux applicable depuis la hausse de la CSG de 2026. L'option pour le barème viendra avec les revenus (V0.9). |
+| Seuil | Aucun impôt si le total des ventes de l'année ne dépasse pas 305 € | Règle française. |
+| Moins-values | Compensées avec les plus-values de la même année seulement | Pas de report possible. |
+| Échanges entre cryptos | Non imposables, y compris vers et depuis l'USDT ; les gains des perpétuels sont donc imposés quand l'USDT repasse en euros | Sursis d'imposition des échanges entre actifs numériques. Approximation : le régime fiscal des dérivés crypto est discuté. |
+| Minage | Bénéfices non commerciaux, micro-BNC (abattement 34 %, plafond 77 700 €), prélèvements sociaux 18,6 % | Régime du minage depuis la loi de finances 2022. |
+| Tranche d'imposition du minage | Supposée : 0 % (sans emploi, étudiant, alternant), 11 % (salarié) | En attendant les vrais revenus (V0.9). |
+| Calendrier | Déclaration ouverte le 10 avril, limite le 4 juin (zone des départements 20 à 54), paiement le 15 septembre | Calendrier fiscal 2026 de la Dordogne. |
+| Par difficulté | Découverte : aucun impôt. Investisseur : flat tax prélevée (ou rendue) à chaque vente, minage payé en septembre. Expert : déclaration remplie automatiquement. Réalité : déclaration à remplir soi-même | Tableau des difficultés. |
+| Sanctions en Réalité | Rien déposé à la date limite : + 10 %. Erreur : l'impôt manquant est redressé avec 0,2 % d'intérêts par mois | Majoration de retard et intérêts de retard réels ; le manquement délibéré (40 %) n'est pas simulé. |

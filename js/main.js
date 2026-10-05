@@ -6,6 +6,8 @@ import { acheterAuMarche, vendreAuMarche } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
 import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } from './portefeuille.js';
 import { traiterPeriode, rattraper } from './suivi.js';
+import { noterAchat, noterCession, definirEvaluateur, echeances, deposer } from './jeufisc.js';
+import { valeurDerivesEUR } from './jeufutures.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
@@ -51,6 +53,19 @@ const app = {
 // Prix en euros de toute crypto : cours de la plateforme, sinon cours WhatToMine converti.
 function prixEUR(base) { return M.prixDeBase(base) ?? prixAltEUR(base, D.etat.alt, M.prixDeBase('BTC')); }
 const marche = { ...M, prixDeBase: prixEUR };
+
+// Valeur de tous les actifs numériques (pour la méthode du portefeuille global).
+definirEvaluateur(p => {
+  let v = 0;
+  for (const [base, a] of Object.entries(p.plateforme.actifs)) v += a.qte * (prixEUR(base) || 0);
+  for (const o of p.plateforme.ordres || []) if (o.reserve.qte) v += o.reserve.qte * (prixEUR(o.base) || 0);
+  if (p.minage) {
+    v += p.minage.soldePool * (prixEUR('BTC') || 0);
+    for (const [tag, q] of Object.entries(p.minage.soldesAlt || {})) v += q * (prixEUR(tag) || 0);
+  }
+  v += valeurDerivesEUR(p, F.etat.marques, D.etat.eurUsd);
+  return v;
+});
 
 function ctx() {
   const cj = jourTempo(Date.now()), cd = jourTempo(Date.now() + 864e5);
@@ -195,10 +210,12 @@ async function passerOrdre() {
   const glisse = res.glissement > 0.00005 ? ' · glissement ' + pct(res.glissement).replace('+', '') : '';
   if (achat) {
     appliquerAchat(partie, c.base, res.qteNette, res.cout);
+    noterAchat(partie, res.cout);
     journal(partie, 'achat', `Achat de ${qte(res.qteNette)} ${c.base} à ${prix(res.prixMoyen)} € (${eur(res.cout)}${res.frais ? ', frais ' + qte(res.frais) + ' ' + c.base : ''})`);
     toast(`Achat exécuté : ${qte(res.qteNette)} ${c.base} à ${prix(res.prixMoyen)} €${glisse}`, 'ok');
   } else {
     const pv = appliquerVente(partie, c.base, res.quantite, res.recuNet);
+    noterCession(partie, res.recuNet);
     journal(partie, 'vente', `Vente de ${qte(res.quantite)} ${c.base} à ${prix(res.prixMoyen)} € (${eur(res.recuNet)} reçus, ${pv >= 0 ? 'plus' : 'moins'}-value ${eur(Math.abs(pv))})`);
     toast(`Vente exécutée : ${eur(res.recuNet)} reçus${glisse}`, 'ok');
   }
@@ -445,6 +462,11 @@ const actions = {
     if (r.erreur) { rendre(); return toast(r.erreur, 'erreur'); }
     sauver(partie); rendre(); toast('Position fermée : ' + (r.net >= 0 ? '+' : '') + r.net.toFixed(2).replace('.', ',') + ' USDT', r.net >= 0 ? 'ok' : '');
   },
+  declarer: an => {
+    const r = deposer(partie, Number(an), nombre(app.decl?.pv), nombre(app.decl?.recettes));
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    app.decl = null; sauver(partie); rendre(); toast('Déclaration déposée.', 'ok');
+  },
   'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
   'acheter-machine': id => {
     const m = modele(id), d = DIFFICULTES[partie.difficulte];
@@ -518,6 +540,7 @@ document.addEventListener('input', ev => {
   }
   else if (k in app.saisie) { app.saisie[k] = el.value; majLive(); }
   else if (k === 'virement') app.virement.montant = el.value;
+  else if (k === 'decl-pv' || k === 'decl-recettes') { app.decl = app.decl || { pv: '', recettes: '' }; app.decl[k === 'decl-pv' ? 'pv' : 'recettes'] = el.value; }
   else if (k === 'perp-tr') app.perp.tr = el.value;
   else if (k === 'perp-marge') { app.perp.marge = el.value; majLive(); }
   else if (k === 'perp-levier') { app.perp.levier = Number(el.value); const t = racine.querySelector('[data-perp-levier]'); if (t) t.textContent = '×' + el.value; majLive(); }
@@ -586,6 +609,14 @@ rattraperDerives(vuAuDemarrage);
 setInterval(() => preparerMeteo(), 36e5);
 
 let dernierSauvetage = Date.now();
+function verifierImpots() {
+  if (!partie) return;
+  const evts = echeances(partie);
+  if (evts.length) { sauver(partie); toast(evts[evts.length - 1], ''); if (app.ecran === 'jeu') rendre(); }
+}
+setTimeout(verifierImpots, 3000);
+setInterval(verifierImpots, 60000);
+
 setInterval(() => {
   const evts = avancerMinage();
   if (evts.length) { sauver(partie); toast(evts[evts.length - 1], 'ok'); if (app.ecran === 'jeu') rendre(); }

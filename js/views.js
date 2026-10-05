@@ -7,6 +7,7 @@ import { ongletMinage, ongletInstallations } from './views-minage.js';
 import { valeurParc } from './jeuminage.js';
 import { ongletPerp, valeurFutures } from './views-futures.js';
 import { valeurDerivesEUR } from './jeufutures.js';
+import { sectionImpots } from './views-fisc.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -493,6 +494,7 @@ function ongletFinances(ctx) {
       <button class="bouton" data-action="virer">Virer</button>
       <p class="discret" style="font-size:12px">Virement SEPA instantané, sans frais.</p>
     </section>` : ''}
+    ${sectionImpots(ctx)}
     ${journalHtml(partie, 30)}
     <section class="section">
       <div class="section-titre"><h2>Partie</h2></div>

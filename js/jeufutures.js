@@ -2,6 +2,7 @@
 import { DIFFICULTES } from './config.js';
 import { contrat, ouvrir, fermer, estLiquidee, financement, prochainFinancement, risque, pnl } from './futures.js';
 import { journal } from './state.js';
+import { noterAchat, noterCession } from './jeufisc.js';
 import { eur } from './format.js';
 
 const u = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
@@ -19,12 +20,14 @@ export function transferer(partie, sens, montant, eurUsd) {
     if (montant > pl.soldeEUR + 1e-9) return { erreur: 'Solde insuffisant : ' + eur(pl.soldeEUR) + ' disponibles.' };
     const usdt = montant * eurUsd * 0.999;
     pl.soldeEUR -= montant; f.soldeUSDT += usdt;
+    noterAchat(partie, montant); // l'USDT est un actif numérique
     journal(partie, 'derive', `Conversion de ${eur(montant)} en ${u(usdt)} pour la marge`);
     return { recu: usdt };
   }
   if (montant > f.soldeUSDT + 1e-9) return { erreur: 'Solde de marge insuffisant : ' + u(f.soldeUSDT) + '.' };
   const e = montant / eurUsd * 0.999;
   f.soldeUSDT -= montant; pl.soldeEUR += e;
+  noterCession(partie, e); // retour en euros : cession imposable
   journal(partie, 'derive', `Conversion de ${u(montant)} en ${eur(e)}`);
   return { recu: e };
 }
