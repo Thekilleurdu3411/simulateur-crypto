@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.13
+# Proof of Life — V0.13
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.

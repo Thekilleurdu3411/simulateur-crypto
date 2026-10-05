@@ -22,8 +22,8 @@ export async function notifier(texte, tag = 'jeu') {
   const options = { body: texte, icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag, renotify: true };
   try {
     const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-    if (reg) await reg.showNotification('Simulateur crypto', options);
-    else new Notification('Simulateur crypto', options);
+    if (reg) await reg.showNotification('Proof of Life', options);
+    else new Notification('Proof of Life', options);
     return true;
   } catch (e) { return false; }
 }

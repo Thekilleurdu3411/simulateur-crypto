@@ -1,6 +1,6 @@
 {
-  "name": "Simulateur crypto",
-  "short_name": "SimCrypto",
+  "name": "Proof of Life",
+  "short_name": "Proof of Life",
   "description": "Trading et minage crypto sur le vrai marché, en temps réel.",
   "lang": "fr",
   "start_url": "./",

@@ -133,7 +133,7 @@ export function vueLancement(ctx) {
     <div class="entete" style="gap:14px">
       <div class="logo">${icone('marche', 30).replace('currentColor', '#F3B33D')}</div>
       <div class="surtitre">Version ${VERSION}</div>
-      <h1>Simulateur crypto</h1>
+      <h1>Proof of Life</h1>
       <p>Trading et minage sur le vrai marché, en temps réel. Tu pars de zéro, comme dans la vraie vie.</p>
     </div>
     ${partie ? `<div class="carte">
