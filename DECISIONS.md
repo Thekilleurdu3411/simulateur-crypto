@@ -203,3 +203,17 @@ Tout peut être changé : il suffit de le demander.
 | Appli complètement fermée | Aucune notification : il faudrait un serveur d'envoi (Web Push). Les événements sont rejoués et résumés à la réouverture | **À décider avec toi** : un petit serveur gratuit (par exemple un worker Cloudflare) permettrait les vraies notifications push. |
 | Synchro entre appareils | Manuelle : « Exporter » sur un téléphone, « Importer » sur l'autre (fichier de sauvegarde), avec vérification du fichier et confirmation avant de remplacer la partie | Sans compte ni serveur. **À décider** : une synchro automatique demanderait un stockage en ligne (par exemple un Gist GitHub privé avec ton accord). |
 | Corrections du rejeu | Le réseau Bitcoin du jour (servant seulement à comparer les prix des machines) n'écrase plus celui de la date du jeu ; une crypto pas encore cotée à la date choisie est masquée | Trouvé en relisant la V0.11. |
+
+## Validé par Valentin (5 octobre 2026)
+
+| Sujet | Choix |
+| --- | --- |
+| Nom du jeu | Proof of Life |
+| Rejeu accéléré | Vitesse au choix, de ×1 (temps réel) à ×60, classement séparé |
+| Notifications appli fermée | Oui, avec un petit serveur gratuit (Cloudflare) à créer avec son compte |
+| Synchro entre appareils | Export / import suffit |
+| APL | À ajouter (zone, loyer plafond, revenus) |
+| Étudiant | Job de 10 h par semaine + bourse CROUS selon un échelon choisi à la création |
+| Rejeu avant 2020 | Oui, jusqu'à 2017 : prix en dollars convertis au cours euro-dollar de l'époque, machines S9 et S17 ajoutées |
+| Vie en rejeu | SMIC, tarifs d'électricité et loyers de l'année choisie |
+| Score d'une partie personnalisée | Classement à part, sans coefficient de score |
