@@ -9,6 +9,8 @@ import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
+import * as F from './marchefutures.js';
+import { futuresDe, transferer, ouvrirPosition, fermerPosition, surPrixMarque, rattraper as rattraperFut } from './jeufutures.js';
 import { acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
 import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
@@ -41,7 +43,9 @@ const app = {
   graphErreur: false,
   absence: null,
   sousMinage: 'parc',
-  rig: { carte: '3070', nb: 6, coin: 'RVN' }
+  rig: { carte: '3070', nb: 6, coin: 'RVN' },
+  vueMarche: 'comptant',
+  perp: { s: 'BTCUSDT', sens: 'long', levier: 2, marge: '', tr: '', trSens: 'vers-marge' }
 };
 
 // Prix en euros de toute crypto : cours de la plateforme, sinon cours WhatToMine converti.
@@ -51,7 +55,7 @@ const marche = { ...M, prixDeBase: prixEUR };
 function ctx() {
   const cj = jourTempo(Date.now()), cd = jourTempo(Date.now() + 864e5);
   const cache = partie?.minage?.couleurs || {};
-  return { app, partie, M: marche, D, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
+  return { app, partie, M: marche, D, F, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
 }
 function difficulte() { return DIFFICULTES[partie.difficulte]; }
 
@@ -409,6 +413,38 @@ const actions = {
   compteur: v => confirmer('Passer à ' + v + ' kVA ?', `Prestation Enedis de ${eur(CHANGEMENT_PUISSANCE)}. Le nouvel abonnement s'applique tout de suite.`, 'Changer', () => {
     avancerMinage(); const r = changerCompteur(partie, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Compteur passé à ' + v + ' kVA.', 'ok');
   }),
+  'vue-marche': v => { app.vueMarche = v; if (v === 'perp') F.demarrer(); rendre(); },
+  'perp-contrat': v => { app.perp.s = v; rendre(); },
+  'perp-sens': v => { app.perp.sens = v; rendre(); },
+  'perp-tr-sens': v => { app.perp.trSens = v; rendre(); },
+  'perp-transferer': () => {
+    const r = transferer(partie, app.perp.trSens, nombre(app.perp.tr), D.etat.eurUsd);
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    app.perp.tr = ''; sauver(partie); rendre(); toast('Conversion effectuée.', 'ok');
+  },
+  'perp-ouvrir': async () => {
+    const p = app.perp, marge = nombre(p.marge);
+    if (!(marge > 0)) return toast('Indique une marge en USDT.', 'erreur');
+    app.enCours = true; rendre();
+    let r;
+    try {
+      const [prixF, regles] = await Promise.all([F.meilleursPrix(p.s), F.regles(p.s)]);
+      r = ouvrirPosition(partie, { s: p.s, sens: p.sens, levier: p.levier, marge }, prixF, regles);
+    } catch (e) { r = { erreur: 'Impossible de joindre le marché des dérivés. Réessaie.' }; }
+    app.enCours = false;
+    if (r.erreur) { rendre(); return toast(r.erreur, 'erreur'); }
+    p.marge = ''; sauver(partie); rendre(); toast('Position ouverte. Liquidation à ' + Math.round(r.position.liquidation).toLocaleString('fr-FR') + ' USDT.', 'ok');
+  },
+  'perp-fermer': async id => {
+    const pos = partie.futures.positions.find(x => x.id === id); if (!pos) return;
+    app.enCours = true; rendre();
+    let r;
+    try { const prixF = await F.meilleursPrix(pos.s); r = fermerPosition(partie, id, prixF.bid, prixF.ask); }
+    catch (e) { r = { erreur: 'Impossible de joindre le marché des dérivés. Réessaie.' }; }
+    app.enCours = false;
+    if (r.erreur) { rendre(); return toast(r.erreur, 'erreur'); }
+    sauver(partie); rendre(); toast('Position fermée : ' + (r.net >= 0 ? '+' : '') + r.net.toFixed(2).replace('.', ',') + ' USDT', r.net >= 0 ? 'ok' : '');
+  },
   'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
   'acheter-machine': id => {
     const m = modele(id), d = DIFFICULTES[partie.difficulte];
@@ -482,10 +518,13 @@ document.addEventListener('input', ev => {
   }
   else if (k in app.saisie) { app.saisie[k] = el.value; majLive(); }
   else if (k === 'virement') app.virement.montant = el.value;
+  else if (k === 'perp-tr') app.perp.tr = el.value;
+  else if (k === 'perp-marge') { app.perp.marge = el.value; majLive(); }
+  else if (k === 'perp-levier') { app.perp.levier = Number(el.value); const t = racine.querySelector('[data-perp-levier]'); if (t) t.textContent = '×' + el.value; majLive(); }
   else if (k === 'rig-nb') { app.rig.nb = Number(el.value); const t = racine.querySelector('[data-rig-nb]'); if (t) t.textContent = el.value; }
 });
 
-document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.input === 'rig-nb') rendre(); });
+document.addEventListener('change', ev => { if (ev.target.dataset && ['rig-nb', 'perp-levier'].includes(ev.target.dataset.input)) rendre(); });
 
 // ---------- Démarrage ----------
 
@@ -506,7 +545,7 @@ function marquerVu() { if (partie) { partie.vuLe = Date.now(); sauver(partie); }
 setInterval(marquerVu, 30000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') marquerVu();
-  else { const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(marquerVu); }
+  else { const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(() => rattraperDerives(v)).then(marquerVu); }
 });
 
 setInterval(() => {
@@ -527,6 +566,23 @@ D.demarrer().then(() => rattraperMinage(vuAuDemarrage));
 D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {});
 setInterval(() => D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {}), 36e5);
 D.ecouter(() => { if (app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
+
+// Perpétuels : prix de marque en direct, financement et liquidations.
+F.ecouter((type, s) => {
+  if (type === 'marque' && s && partie && partie.futures) {
+    const evts = surPrixMarque(partie, s, F.etat.marques[s]);
+    if (evts.length) { sauver(partie); toast(evts[evts.length - 1], evts[0].startsWith('Liquidation') ? 'erreur' : ''); if (app.ecran === 'jeu') rendre(); }
+  }
+  planifierMaj();
+});
+async function rattraperDerives(depuis) {
+  if (!partie || !partie.futures || !partie.futures.positions.length) return;
+  F.demarrer();
+  const evts = await rattraperFut(partie, F);
+  sauver(partie);
+  if (evts.length) { ajouterAbsence(depuis, evts); if (app.ecran === 'jeu') rendre(); }
+}
+rattraperDerives(vuAuDemarrage);
 setInterval(() => preparerMeteo(), 36e5);
 
 let dernierSauvetage = Date.now();

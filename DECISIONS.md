@@ -101,3 +101,20 @@ Tout peut être changé : il suffit de le demander.
 | Chez l'hébergeur | Pas de bruit ni de chaleur (salle à 25 °C), entretien compris, réparations + 5 jours | Le service vendu par un hébergeur. |
 | Rigs | Non acceptés par les hébergeurs | Les hébergeurs listés n'accueillent que des ASIC. |
 | Local professionnel et triphasé | Reportés | Bail, raccordement et contrat pro demandent encore des données réelles. |
+
+## V0.7
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Produits | Perpétuels BTCUSDT, ETHUSDT, SOLUSDT, marge isolée, mode à sens unique | Les contrats les plus échangés ; la marge croisée pourra venir plus tard. |
+| Données | Prix de marque, taux de financement, carnet et historique publics de Binance Futures | Données réelles, en direct. |
+| Monnaie de marge | USDT, obtenus en convertissant des euros au cours EUR/USDT réel (0,1 % de frais) | Les perpétuels réels sont en USDT. |
+| Frais | 0,05 % preneur à l'ouverture et à la fermeture | Tarif standard (finder.com, 2026). |
+| Levier maximum | Découverte : désactivé. Investisseur : ×5. Expert et Réalité : ×125 (BTC, ETH), ×75 (SOL) | Tableau des difficultés ; maximums de premier palier de la plateforme. |
+| Marge de maintien | 0,4 % (BTC), 0,5 % (ETH), 0,65 % (SOL) | Valeurs de premier palier ; à vérifier, les paliers supérieurs ne sont pas encore simulés. |
+| Liquidation | Dès que le prix de marque atteint le prix de liquidation ; toute la marge est perdue | Fonctionnement réel en marge isolée. |
+| Financement | À 0 h, 8 h et 16 h UTC, au taux réel en cours (en direct) ou historique (rattrapage) | Échéances réelles de la plateforme. |
+| Investisseur | Alerte à 80 % de marge perdue ; aucune liquidation pendant l'absence | Tableau des difficultés. |
+| Expert et Réalité | Liquidation possible pendant l'absence, rejouée avec les vraies bougies de prix de marque | Réalisme. |
+| Exécution | Au marché uniquement (meilleur prix), sans glissement sur le carnet | Simplification de cette première version. |
+| Cadre légal | Non simulé | L'accès des particuliers européens aux dérivés crypto dépend des plateformes et de la réglementation. |

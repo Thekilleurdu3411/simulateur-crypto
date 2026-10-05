@@ -5,6 +5,8 @@ import { patrimoine } from './engine.js';
 import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
 import { ongletMinage, ongletInstallations } from './views-minage.js';
 import { valeurParc } from './jeuminage.js';
+import { ongletPerp, valeurFutures } from './views-futures.js';
+import { valeurDerivesEUR } from './jeufutures.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -32,6 +34,7 @@ function libelleSituation(p) {
 export function valeurLive(cle, ctx) {
   const { partie, M, app } = ctx;
   const [k, arg] = cle.split(':');
+  if (['fm', 'ff', 'fp', 'fusdt', 'festim'].includes(k)) return valeurFutures(k, arg, ctx);
   const t = arg ? M.ticker(arg) : null;
   switch (k) {
     case 'px': return { t: t ? prix(t.c) : '—' };
@@ -53,7 +56,7 @@ export function valeurLive(cle, ctx) {
     case 'factureHeb': { const mn = partie.minage; return { t: mn ? eur(mn.factureHebEUR || 0) + ' · ' + Math.round(mn.factureHebKWh || 0).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
-  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd));
+  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd), valeurDerivesEUR(partie, ctx.F?.etat.marques || {}, ctx.D?.etat.eurUsd));
   switch (k) {
     case 'patrimoine': return { t: eur(P.total) };
     case 'perf': { const d = P.total - partie.capitalDepart; return { t: eurSigne(d) + ' (' + pct(d / partie.capitalDepart) + ')', cls: d >= 0 ? 'hausse' : 'baisse' }; }
@@ -335,7 +338,9 @@ function ongletMarche(ctx) {
   const ouvert = partie.plateforme.statut === 'ouvert';
   if (app.crypto) return detailCrypto(ctx);
   const liste = M.cryptosDisponibles();
-  return `<h1 style="font-size:24px;font-weight:800">Marché</h1>
+  const choix = `<div class="segment sur-fond"><button data-action="vue-marche" data-v="comptant" aria-pressed="${app.vueMarche !== 'perp'}">Comptant</button><button data-action="vue-marche" data-v="perp" aria-pressed="${app.vueMarche === 'perp'}">Perpétuels</button></div>`;
+  if (app.vueMarche === 'perp') return `<h1 style="font-size:24px;font-weight:800">Marché</h1>${choix}${ongletPerp(ctx, live)}`;
+  return `<h1 style="font-size:24px;font-weight:800">Marché</h1>${choix}
     ${!ouvert ? `<div class="carte info" style="font-size:13px;color:var(--texte-2)">Tu peux suivre les prix, mais il te faut un compte sur la plateforme pour acheter.
       <button class="bouton petit" data-action="onglet" data-v="finances">Ouvrir un compte</button></div>` : ''}
     <div class="carte liste-lignes" style="padding:0 16px;gap:0">

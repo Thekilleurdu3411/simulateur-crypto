@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.6
+# Simulateur crypto — V0.7
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -18,6 +18,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Gestion du parc (V0.4) : température de la pièce selon la météo réelle de ta ville, bridage en surchauffe, extracteur d'air, bruit et plaintes des voisins, pannes et réparations (garantie), dépoussiérage, modes éco / normal / performance, revente d'occasion.
 - Autres cryptos (V0.5) : rigs de cartes graphiques à monter soi-même (RTX 3060 Ti à RTX 4090, RX 7900 XTX) sur Ravencoin, Ethereum Classic ou Ergo, Antminer L9 en minage fusionné Litecoin + Dogecoin, échange des cryptos minées contre du BTC.
 - Installations (V0.6) : puissance du compteur (6, 9, 12 kVA, abonnement réel, prestation Enedis), hébergeurs réels (SAZ Mining, Compass, EZ Blockchain, Terra Hosting) avec envoi, engagement et facture mensuelle, machines à eau chez l'hébergeur.
+- Perpétuels avec levier (V0.7) : BTC, ETH et SOL, marge en USDT, levier selon la difficulté, prix de liquidation, financement toutes les 8 h au taux réel, liquidation possible pendant l'absence (sauf en Investisseur).
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -30,6 +31,7 @@ Points d'accès publics de Binance réservés aux données de marché, sans comp
 - Calendrier Tempo : `https://www.api-couleur-tempo.fr`.
 - Météo : `https://api.open-meteo.com`.
 - Autres cryptos minables : WhatToMine, recopié dans `data/altcoins.json`.
+- Perpétuels : `https://fapi.binance.com` et `wss://fstream.binance.com`.
 
 Une paire absente du marché réel est masquée automatiquement.
 
@@ -74,6 +76,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/donnees.js` | Réseau Bitcoin, taux euro-dollar, calendrier Tempo, météo |
 | `js/altcoins.js` | Cartes graphiques, rigs, autres cryptos minables (testé) |
 | `js/views-minage.js` | Écrans du minage |
+| `js/futures.js`, `js/jeufutures.js`, `js/marchefutures.js`, `js/views-futures.js` | Perpétuels : calculs (testés), règles, données, écran |
 | `data/altcoins.json`, `scripts/maj-altcoins.mjs` | Données réseau des autres cryptos, mises à jour chaque heure par GitHub Actions |
 | `js/state.js` | Sauvegarde locale et règles de la partie |
 | `js/views.js` | Écrans |
@@ -83,10 +86,9 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.7 Dérivés avec levier.
-2. V0.8 Fiscalité.
-3. V0.9 Vie quotidienne, métiers complets et date de départ libre.
-4. V1.0 Notifications et synchro entre appareils.
+1. V0.8 Fiscalité.
+2. V0.9 Vie quotidienne, métiers complets et date de départ libre.
+3. V1.0 Notifications et synchro entre appareils.
 
 ## Décisions
 
