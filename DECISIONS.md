@@ -30,3 +30,26 @@ Tout peut être changé : il suffit de le demander.
 | Ordres trop proches du prix | Refusés s'ils s'exécuteraient immédiatement | Il faut alors un ordre au marché, comme sur une plateforme qui protège ses ordres « faiseur ». |
 | Rattrapage hors ligne | Bougies d'une minute jusqu'à 3 jours d'absence, bougies d'une heure au-delà | Précision maximale sans télécharger des centaines de pages. |
 | Découverte et absence | Les ordres placés par le joueur s'exécutent aussi pendant l'absence | Ce sont ses propres décisions ; la protection « aucune perte pendant l'absence » vise les pannes et les liquidations. |
+
+## V0.3
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Calcul des gains | Valeur attendue FPPS : puissance ÷ (difficulté × 2³²) × (récompense + frais moyens des 144 derniers blocs) × (1 − commission) | C'est ce que verse un pool FPPS ; vérifié contre le hashprice publié par Hashrate Index le 28/09/2026 (0,000477 BTC par PH et par jour). |
+| Données réseau | mempool.space : difficulté, hauteur, frais moyens, actualisés toutes les 10 minutes | Source publique, gratuite et sans compte. |
+| Absence sans données réseau | Le minage n'avance pas tant que la difficulté n'est pas connue | Éviter de compter l'électricité sans les gains. Dès que les données arrivent, toute la période est rattrapée. |
+| Rattrapage du minage | Difficulté actuelle appliquée à toute la période d'absence | La difficulté ne change qu'environ toutes les deux semaines ; l'écart est faible. |
+| Prix des machines | Occasion : D-Central (reconditionnées, 600 à 925 dollars canadiens, convertis en dollars américains). Neuf : Viperatech (S21 Pro, 1 910 $), Million Miner (S21 XP 3 800 $, hydros) | Prix publics trouvés ; l'indice de prix ASIC de Hashrate Index est payant. |
+| Conversion | Dollar → euro au cours EUR/USDT réel, TVA 20 % ajoutée | Achat par un particulier en France. |
+| Livraison | Forfait 60 € (occasion, 5 jours) et 150 € (neuf, 14 jours), délais divisés par la vitesse du temps | Estimation : pas de grille publique unique. À ajuster. |
+| Livraison reçue | La machine arrive arrêtée : c'est au joueur de la brancher | Éviter qu'une livraison fasse sauter le compteur pendant l'absence. |
+| Compteur | 6 kVA en appartement et chez les parents, 9 kVA en maison ; 2 kVA restent au logement | Puissances courantes en France. |
+| Chez les parents | Pas d'ASIC possible | Cahier des charges : « pas question d'un ASIC bruyant ». |
+| Machines à eau | Visibles mais verrouillées jusqu'aux installations (V0.6) | Elles demandent un circuit d'eau, souvent du triphasé. |
+| Pools | Braiins (2 %), AntPool (2,5 %), Luxor (0,7 %, seuil 0,004), F2Pool (4 %), ViaBTC (4 %, PPS+) ; versement à minuit UTC | Frais et seuils publiés (spark.money). |
+| Changement de pool | Le solde en attente est conservé | Simplification ; en vrai, un petit solde peut rester bloqué chez l'ancien pool. |
+| Électricité | Tarif Bleu EDF du 1er août 2026 : Base 0,2001 €/kWh (6 kVA), 0,1985 (9 kVA) ; Tempo bleu, blanc, rouge en heures pleines et creuses (22 h à 6 h) | Grille officielle de la CRE. |
+| Couleurs Tempo | Vrai calendrier (api-couleur-tempo.fr) ; couleur inconnue = prix Base | Ne jamais inventer une couleur. |
+| Facture | Seule la consommation des machines est facturée, chaque 1er du mois, sur le compte bancaire ; découvert possible | L'abonnement et le reste du logement arrivent avec la vie quotidienne (V0.9). |
+| BTC reçus du pool | Prix de revient = valeur au moment du versement | Règle fiscale française pour les revenus de minage. |
+| Machines dans le patrimoine | Pas encore comptées | Leur valeur de revente viendra avec le marché de l'occasion (V0.4). |

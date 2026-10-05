@@ -1,7 +1,7 @@
 // Données fixes du jeu : difficultés, cryptos, profils.
 // Les prix ne sont jamais ici : ils viennent toujours du marché réel.
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 
 // Point d'accès public de Binance réservé aux données de marché (sans compte, sans clé).
 export const API_REST = 'https://data-api.binance.vision';

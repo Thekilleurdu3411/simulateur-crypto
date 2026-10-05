@@ -3,6 +3,7 @@ import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VE
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
 import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
+import { ongletMinage } from './views-minage.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -45,6 +46,9 @@ export function valeurLive(cle, ctx) {
     }
     case 'horloge': return { t: new Date().toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) };
     case 'kyc': return { t: duree(partie.plateforme.kycFin - Date.now()) };
+    case 'liv': { const m = partie.minage?.machines.find(x => x.id === arg); return { t: m ? duree(m.livraisonLe - Date.now()) : '' }; }
+    case 'pool': { const q = partie.minage?.soldePool || 0; const p = M.prixDeBase('BTC'); return { t: qte(q) + ' BTC' + (p ? ' · ' + eur(q * p) : '') }; }
+    case 'facture': { const mn = partie.minage; return { t: mn ? eur(mn.factureEUR) + ' · ' + Math.round(mn.factureKWh).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
   const P = patrimoine(partie, M.prixDeBase);
@@ -249,7 +253,7 @@ export function vueJeu(ctx) {
   const d = DIFFICULTES[partie.difficulte];
   const corps = {
     accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances,
-    minage: c => ongletBientot('Minage', '0.3', "Achat de machines ASIC, choix du pool et gains calculés bloc par bloc avec la vraie difficulté du réseau Bitcoin."),
+    minage: c => ongletMinage(c, live),
     installations: c => ongletBientot('Installations', '0.4', "Ton logement, ton compteur électrique, ton contrat (Base ou Tempo), puis les hébergeurs et les locaux professionnels.")
   }[app.onglet](ctx);
   return `<header class="barre-haut">

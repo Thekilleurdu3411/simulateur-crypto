@@ -8,6 +8,9 @@ import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } f
 import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
+import * as D from './donnees.js';
+import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre } from './jeuminage.js';
+import { modele, prixMachineEUR, LIVRAISON, jourTempo } from './minage.js';
 import { eur, prix, qte, pct, duree } from './format.js';
 
 const racine = document.getElementById('app');
@@ -34,10 +37,15 @@ const app = {
   toast: null,
   graph: null,
   graphErreur: false,
-  absence: null
+  absence: null,
+  sousMinage: 'parc'
 };
 
-function ctx() { return { app, partie, M }; }
+function ctx() {
+  const cj = jourTempo(Date.now()), cd = jourTempo(Date.now() + 864e5);
+  const cache = partie?.minage?.couleurs || {};
+  return { app, partie, M, D, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
+}
 function difficulte() { return DIFFICULTES[partie.difficulte]; }
 
 // ---------- Affichage ----------
@@ -237,9 +245,29 @@ async function lancerRattrapage(retour) {
   if (r.erreur || !r.evenements.length) { sauver(partie); return; }
   partie.historique.sort((a, b) => b.t - a.t);
   sauver(partie);
-  if (retour && depuis) app.absence = { duree: duree(Date.now() - depuis), evenements: r.evenements };
+  if (retour && depuis) ajouterAbsence(depuis, r.evenements);
   else toast(r.evenements[r.evenements.length - 1], 'ok');
   if (app.ecran === 'jeu') rendre();
+}
+
+function ajouterAbsence(depuis, evenements) {
+  if (!evenements.length) return;
+  if (app.absence) app.absence.evenements.push(...evenements);
+  else app.absence = { duree: duree(Date.now() - (depuis || Date.now())), evenements: [...evenements] };
+}
+
+// Minage : fait avancer gains, factures et livraisons jusqu'à maintenant.
+function avancerMinage() {
+  if (!partie || !partie.minage) return [];
+  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC') });
+}
+
+async function rattraperMinage(depuis) {
+  if (!partie || !partie.minage) return;
+  const mn = partie.minage;
+  if (mn.contrat.type === 'tempo') await D.chargerTempo(joursEntre(mn.dernierCalcul, Date.now())).catch(() => {});
+  const evts = avancerMinage();
+  if (evts.length) { sauver(partie); ajouterAbsence(depuis, evts); if (app.ecran === 'jeu') rendre(); }
 }
 
 function virer() {
@@ -299,7 +327,7 @@ const actions = {
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
-  onglet: v => { app.onglet = v; app.crypto = null; rendre(); window.scrollTo(0, 0); },
+  onglet: v => { app.onglet = v; app.crypto = null; if (v === 'minage' && partie) minageDe(partie); rendre(); window.scrollTo(0, 0); },
   crypto: s => { if (!s) return; app.onglet = 'marche'; app.crypto = s; app.saisie = saisieVide(); rendre(); window.scrollTo(0, 0); },
   liste: () => { app.crypto = null; rendre(); },
   intervalle: v => { app.intervalle = v; rendre(); },
@@ -333,6 +361,27 @@ const actions = {
     if (annulerOrdre(partie, id)) { sauver(partie); rendre(); toast('Ordre annulé, fonds débloqués.', 'ok'); }
   },
   'fermer-absence': () => { app.absence = null; rendre(); },
+  'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
+  'acheter-machine': id => {
+    const m = modele(id), d = DIFFICULTES[partie.difficulte];
+    if (!D.etat.eurUsd) return toast('Taux euro-dollar indisponible pour le moment. Réessaie dans un instant.', 'erreur');
+    const px = prixMachineEUR(m, D.etat.eurUsd);
+    const h = LIVRAISON[m.etat].jours * 24 / d.temps;
+    confirmer('Acheter ' + m.nom + ' ?', `${eur(px.total)} prélevés sur ton compte bancaire (TVA et livraison comprises). Livraison dans ${h >= 24 ? String(Math.round(h / 24 * 10) / 10).replace('.', ',') + ' jours' : Math.round(h) + ' h'}.`, 'Acheter', () => {
+      const r = acheterMachine(partie, id, D.etat.eurUsd);
+      if (r.erreur) return toast(r.erreur, 'erreur');
+      sauver(partie); app.sousMinage = 'parc'; rendre(); toast('Commande passée : ' + m.nom + '.', 'ok');
+    });
+  },
+  demarrer: id => { avancerMinage(); const r = demarrerMachine(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  arreter: id => { avancerMinage(); const r = arreterMachine(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  pool: v => { avancerMinage(); const mn = minageDe(partie); if (mn.pool === v) return; mn.pool = v; journal(partie, 'machine', 'Changement de pool'); sauver(partie); rendre(); },
+  contrat: v => {
+    avancerMinage(); const mn = minageDe(partie); if (mn.contrat.type === v) return;
+    mn.contrat.type = v; journal(partie, 'facture', 'Contrat d\'électricité : option ' + (v === 'tempo' ? 'Tempo' : 'Base'));
+    if (v === 'tempo') D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).then(() => { if (app.onglet === 'minage') rendre(); });
+    sauver(partie); rendre();
+  },
   kyc: () => { demarrerKyc(partie); sauver(partie); rendre(); },
   'vir-sens': v => { app.virement.sens = v; rendre(); },
   virer: () => virer(),
@@ -385,7 +434,7 @@ function marquerVu() { if (partie) { partie.vuLe = Date.now(); sauver(partie); }
 setInterval(marquerVu, 30000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') marquerVu();
-  else lancerRattrapage(true).then(marquerVu);
+  else { const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(marquerVu); }
 });
 
 setInterval(() => {
@@ -400,7 +449,19 @@ setInterval(() => {
 if (partie) verifierKyc(partie) && sauver(partie);
 rendre();
 M.demarrer();
+const vuAuDemarrage = partie?.vuLe;
 lancerRattrapage(true).then(marquerVu);
+D.demarrer().then(() => rattraperMinage(vuAuDemarrage));
+D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {});
+setInterval(() => D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {}), 36e5);
+D.ecouter(() => { if (app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
+
+let dernierSauvetage = Date.now();
+setInterval(() => {
+  const evts = avancerMinage();
+  if (evts.length) { sauver(partie); toast(evts[evts.length - 1], 'ok'); if (app.ecran === 'jeu') rendre(); }
+  else if (partie && Date.now() - dernierSauvetage > 60000) { sauver(partie); dernierSauvetage = Date.now(); }
+}, 10000);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

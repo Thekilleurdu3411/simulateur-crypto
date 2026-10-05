@@ -110,6 +110,13 @@ export function patrimoine(partie, prixDe) {
     if (o.reserve.eur != null) bloqueEUR += o.reserve.eur;
     else { const p = prixDe(o.base); if (p) actifs += o.reserve.qte * p; }
   }
+  // Minage : BTC en attente de versement au pool (à toi), facture d'électricité en cours (à payer).
+  let facture = 0;
+  if (partie.minage) {
+    const p = prixDe('BTC');
+    if (p) actifs += partie.minage.soldePool * p;
+    facture = partie.minage.factureEUR;
+  }
   const plateforme = partie.plateforme.soldeEUR + bloqueEUR;
-  return { banque: partie.banque.solde, plateforme, actifs, total: partie.banque.solde + plateforme + actifs };
+  return { banque: partie.banque.solde, plateforme, actifs, facture, total: partie.banque.solde + plateforme + actifs - facture };
 }
