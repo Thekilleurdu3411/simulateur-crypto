@@ -3,7 +3,8 @@ import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
 import { vueReglages, valeurTexte } from './views-reglages.js';
 import { reglerHorloge, enRejeu } from './horloge.js';
-import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart } from './state.js';
+import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives } from './notifs.js';
+import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
 import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } from './portefeuille.js';
@@ -123,6 +124,7 @@ let minuterieToast = null;
 function toast(texte, type = '') {
   app.toast = { texte, type };
   rendreSuperpositions();
+  if (partie && type !== 'erreur-action') notifier(texte, type === 'erreur' ? 'alerte' : 'jeu');
   clearTimeout(minuterieToast);
   minuterieToast = setTimeout(() => { app.toast = null; rendreSuperpositions(); }, type === 'erreur' ? 5000 : 4000);
 }
@@ -367,6 +369,30 @@ function exporter() {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+// Importer une sauvegarde (synchro manuelle entre deux appareils).
+function importer() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/json,.json';
+  input.onchange = async () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    let obj;
+    try { obj = JSON.parse(await f.text()); } catch (e) { return toast("Ce fichier n'est pas une sauvegarde lisible.", 'erreur'); }
+    const err = validerSauvegarde(obj);
+    if (err) return toast(err, 'erreur');
+    const remplacer = () => {
+      partie = obj; sauver(partie); changerHorloge();
+      app.onglet = 'accueil'; app.crypto = null; app.absence = null;
+      changerEcran('jeu');
+      toast('Sauvegarde importée : ' + (obj.profil.prenom || 'partie') + '.', 'ok');
+      lancerRattrapage(true).then(() => rattraperMinage(obj.vuLe)).then(marquerVu);
+    };
+    if (partie) confirmer('Remplacer ta partie ?', 'La partie en cours sur ce téléphone sera remplacée par la sauvegarde importée.', 'Remplacer', remplacer, true);
+    else remplacer();
+  };
+  input.click();
+}
+
 function carriere() {
   const p = partie.profil;
   return app.carriere || (app.carriere = { situation: p.situation, metier: p.metier || 'Technicien de maintenance', experience: p.experience || 'debutant', annee: p.anneeApprentissage || 1 });
@@ -578,6 +604,15 @@ const actions = {
   'vir-sens': v => { app.virement.sens = v; rendre(); },
   virer: () => virer(),
   exporter: () => exporter(),
+  importer: () => importer(),
+  notifs: async () => {
+    if (notifsActives()) { desactiverNotifs(); toast('Notifications désactivées.', ''); return rendre(); }
+    const p = await activerNotifs();
+    rendre();
+    if (p === 'granted') toast('Notifications activées : tu seras prévenu quand l\'appli est en arrière-plan.', 'ok');
+    else if (p === 'indisponible') toast("Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord l'appli à l'écran d'accueil.", 'erreur');
+    else toast('Notifications refusées dans les réglages du téléphone.', 'erreur');
+  },
   abandonner: () => confirmer('Abandonner la partie ?', 'Ta partie sera définitivement effacée de ce téléphone.', 'Abandonner', () => {
     const etaitRejeu = enRejeu();
     effacer(); partie = null; if (etaitRejeu) changerHorloge(); changerEcran('lancement');

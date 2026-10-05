@@ -50,3 +50,12 @@ test('catalogue : machines selon la date, récompense selon les halvings', () =>
   assert.equal(subvention(640000), 6.25);
   assert.equal(subvention(840000), 3.125);
 });
+
+test('import de sauvegarde : validation', async () => {
+  const { validerSauvegarde } = await import('../js/state.js');
+  const p = nouvellePartie({ profil: { situation: 'sans' }, difficulte: 'expert', capital: 1000 });
+  assert.equal(validerSauvegarde(p), null);
+  assert.ok(validerSauvegarde({ a: 1 }));
+  assert.ok(validerSauvegarde(null));
+  assert.ok(validerSauvegarde({ ...p, difficulte: 'triche' }));
+});

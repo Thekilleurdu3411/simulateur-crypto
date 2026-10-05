@@ -31,7 +31,7 @@ async function chargerReseauActuel() {
     json(MEMPOOL + '/v1/mining/reward-stats/144')
   ]);
   const fraisMoyens = Number(stats.totalFee) / 144 / 1e8;
-  etat.reseau = {
+  const r = {
     difficulte: Number(hr.currentDifficulty),
     hashrate: Number(hr.currentHashrate),
     hauteur: Number(hauteur),
@@ -40,8 +40,9 @@ async function chargerReseauActuel() {
     recompense: subvention(Number(hauteur)) + fraisMoyens,
     maj: Date.now()
   };
-  etat.reseauActuel = etat.reseau;
-  return etat.reseau;
+  etat.reseauActuel = r;
+  if (!enRejeu()) etat.reseau = r; // en rejeu, le réseau du jour ne sert qu'à comparer les prix des machines
+  return r;
 }
 
 // ---------- Rejeu : réseau Bitcoin à une date passée ----------

@@ -1,6 +1,6 @@
-# Simulateur crypto — V0.12
+# Simulateur crypto — V0.13
 
-Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
+Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
 
 ## Contenu actuel
@@ -12,7 +12,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Marché : 11 à 12 cryptos en euros avec prix et variation 24 h en direct, graphique en chandeliers (15 min à 1 semaine).
 - Ordres au marché : exécutés sur le vrai carnet d'ordres en Expert et Réalité (glissement réel), au meilleur prix en Investisseur, au prix moyen en Découverte. Frais réels (0,1 %), pas de quantité et montant minimum réels de chaque paire.
 - Suivi : patrimoine total, position par crypto, prix de revient moyen, plus-value latente, journal.
-- Sauvegarde locale sur le téléphone, export de la sauvegarde.
+- Sauvegarde locale sur le téléphone, export et import de la sauvegarde.
 - Ordres en attente (V0.2) : limite, stop-limit et OCO, avec fonds bloqués et annulation. Un ordre limite ne s'exécute que si le prix réel traverse son prix.
 - Minage Bitcoin (V0.3) : vraies machines (S19 d'occasion à S21 XP), vrais pools (Braiins, AntPool, Luxor, F2Pool, ViaBTC), gains calculés avec la vraie difficulté du réseau (mempool.space), versements à minuit UTC, électricité au Tarif Bleu EDF (Base ou Tempo avec le vrai calendrier), facture mensuelle, limite du compteur.
 - Gestion du parc (V0.4) : température de la pièce selon la météo réelle de ta ville, bridage en surchauffe, extracteur d'air, bruit et plaintes des voisins, pannes et réparations (garantie), dépoussiérage, modes éco / normal / performance, revente d'occasion.
@@ -24,6 +24,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Réglages avancés (V0.10) : douze réglages libres avant de lancer la partie (vitesse du temps, minage, électricité, frais, pannes, levier, impôts…) ; au moindre changement, la partie devient « Personnalisée » avec son propre classement.
 - Date de départ libre (V0.11) : la partie peut commencer n'importe quel jour depuis le 5 janvier 2020 ; le marché rejoue les vraies bougies minute par minute, avec le réseau Bitcoin, la météo, l'euro-dollar et les jours Tempo de l'époque, et seules les machines déjà sorties.
 - Vie plus complète (V0.12) : 132 métiers sourcés, impôt sur le salaire prélevé à la source, RSA et prime d'activité, transports (en commun, voiture, vélo, à pied).
+- Notifications et synchro manuelle (V0.13) : notifications du téléphone quand l'appli est en arrière-plan, import d'une sauvegarde exportée depuis un autre appareil.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -34,7 +35,7 @@ Points d'accès publics de Binance réservés aux données de marché, sans comp
 - Requêtes ponctuelles : `https://data-api.binance.vision` (prix 24 h, bougies, carnet d'ordres, règles de chaque paire, taux EUR/USDT).
 - Réseau Bitcoin : `https://mempool.space/api` (difficulté, hauteur, frais).
 - Calendrier Tempo : `https://www.api-couleur-tempo.fr`.
-- Météo : `https://api.open-meteo.com`.
+- Météo : `https://api.open-meteo.com` (archives : `https://archive-api.open-meteo.com`).
 - Autres cryptos minables : WhatToMine, recopié dans `data/altcoins.json`.
 - Perpétuels : `https://fapi.binance.com` et `wss://fstream.binance.com`.
 
@@ -49,7 +50,7 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
-Tests du moteur d'ordres :
+Tests (ordres, minage, perpétuels, fiscalité, vie, réglages, rejeu) :
 
 ```bash
 npm test
@@ -88,6 +89,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/vie.js`, `js/jeuvie.js`, `js/views-vie.js` | Vie quotidienne : salaires, loyers, dépenses (testés), écran |
 | `js/views-reglages.js` | Écran des réglages avancés |
 | `js/horloge.js` | Horloge du jeu (direct ou date passée) |
+| `js/notifs.js` | Notifications du téléphone |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -95,8 +97,9 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. Mode rejeu accéléré, perpétuels et autres cryptos en rejeu, métiers complets.
-2. V1.0 Notifications et synchro entre appareils.
+1. Mise en ligne sur GitHub Pages (en attente de ton dépôt).
+2. Mode rejeu accéléré, perpétuels et autres cryptos en rejeu, machines plus anciennes (S9, S17).
+3. APL, Kaspa et Monero, notifications push (serveur) et synchro automatique, si tu les valides.
 
 ## Décisions
 

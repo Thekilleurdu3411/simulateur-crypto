@@ -1,5 +1,5 @@
 // Sauvegarde locale de la partie (sur le téléphone).
-import { KYC_MINUTES_REEL, VERSION, reglesDe, nettoyerReglages } from './config.js';
+import { DIFFICULTES, KYC_MINUTES_REEL, VERSION, reglesDe, nettoyerReglages } from './config.js';
 import { maintenant as tJeu } from './horloge.js';
 
 const CLE = 'simcrypto.partie';
@@ -50,6 +50,15 @@ export function nouvellePartie({ profil, difficulte, capital, reglages, depart }
     vie: { prochaineEcheance: maintenant + 30.44 * 864e5 / d.temps },
     historique: [{ t: maintenant, type: 'debut', texte: 'Début de la partie ' + (d.personnalisee ? '(Personnalisée, base ' + d.base + ')' : 'en ' + d.nom) + ' avec ' + capital.toLocaleString('fr-FR') + ' € en banque' + (dep.type === 'passe' ? ', le ' + new Date(dep.date).toLocaleDateString('fr-FR') + ' (rejeu du marché réel)' : '') }]
   };
+}
+
+/** Vérifie qu'un objet importé ressemble à une sauvegarde de partie. Renvoie un message d'erreur ou null. */
+export function validerSauvegarde(o) {
+  if (!o || typeof o !== 'object') return "Ce fichier n'est pas une sauvegarde.";
+  if (!DIFFICULTES[o.difficulte] || !o.profil || !o.banque || typeof o.banque.solde !== 'number' || !o.plateforme || !Array.isArray(o.historique))
+    return "Ce fichier n'est pas une sauvegarde du simulateur.";
+  if (o.depart && o.depart.type === 'passe' && !(o.depart.reelLe > o.depart.date)) return 'Sauvegarde de rejeu incomplète.';
+  return null;
 }
 
 export function demarrerKyc(partie) {

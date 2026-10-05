@@ -153,7 +153,8 @@ async function pasRejeu() {
         essaiRejeu[s] = Date.now();
         const neuf = await remplir(s, t);
         k = bougieA(s, t);
-        if (!neuf.length && !tickers[s]) { indisponibles.add(s); return; } // paire pas encore cotée à cette date
+        // Paire pas encore cotée à cette date : aucune bougie, ou la plateforme renvoie les premières bougies après la cotation
+        if (!tickers[s] && (!neuf.length || neuf[0].t > t + 120000)) { indisponibles.add(s); notifier('liste'); return; }
       }
       // Trou dans les données (maintenance de la plateforme) : dernier prix connu
       if (!k) k = (tampons[s] || []).filter(x => x.t <= t).pop();

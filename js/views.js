@@ -13,6 +13,7 @@ import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES, TRANSPORTS } from './vie.js';
 import { maintenant as tJeu, enRejeu } from './horloge.js';
+import { actives as notifsActives } from './notifs.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -142,6 +143,7 @@ export function vueLancement(ctx) {
       <button class="bouton" data-action="continuer">Continuer la partie</button>
     </div>` : ''}
     <button class="bouton ${partie ? 'secondaire' : ''}" data-action="nouvelle">Nouvelle partie</button>
+    <button class="lien" style="align-self:center" data-action="importer">Importer une sauvegarde</button>
     <p class="discret" style="font-size:12px;text-align:center">Prix réels fournis par les flux publics de Binance. Aucun argent réel n'est utilisé.</p>
   </main>`;
 }
@@ -523,6 +525,8 @@ function ongletFinances(ctx) {
         <div class="ligne-kv"><span>Capital de départ</span><span class="num">${eur(partie.capitalDepart)}</span></div>
         <div class="grille-2" style="margin-top:8px">
           <button class="bouton secondaire petit" data-action="exporter">Exporter</button>
+          <button class="bouton secondaire petit" data-action="importer">Importer</button>
+          <button class="bouton secondaire petit" data-action="notifs">${notifsActives() ? 'Notifications : oui' : 'Notifications : non'}</button>
           <button class="bouton danger petit" data-action="abandonner">Abandonner</button>
         </div>
       </div>

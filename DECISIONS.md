@@ -152,7 +152,7 @@ Tout peut être changé : il suffit de le demander.
 | Échéance | Salaire puis dépenses tous les 30,44 jours de jeu, raccourcis par la vitesse du temps de la difficulté (7,6 jours réels en Investisseur ×4) | Cohérence avec la vitesse choisie ; rejoué pendant l'absence. |
 | Découvert | Autorisé, 16 % d'agios par an | Taux courant d'un découvert non autorisé. |
 | Changer de situation | Possible à tout moment depuis Finances ; effectif après un mois de jeu (préavis ou recherche) et annulable avant | Délai réaliste d'un changement d'emploi. |
-| Non simulé pour l'instant | Impôt sur le revenu du salaire, transports, inflation, aides (APL, prime d'activité), allocations chômage | Prochaines étapes de la vie quotidienne. |
+| Non simulé pour l'instant | Impôt sur le revenu du salaire, transports, inflation, aides (APL, prime d'activité), allocations chômage | Prochaines étapes de la vie quotidienne (impôt, transports, RSA et prime d'activité ajoutés en V0.12). |
 
 ## V0.10
 
@@ -194,3 +194,12 @@ Tout peut être changé : il suffit de le demander.
 | Prime d'activité | Forfait 638,28 € + 61 % du salaire + bonification jusqu'à 240,63 € (entre 0,5 et 1,15 SMIC, réforme d'avril 2026) − le plus grand du forfait et du salaire ; non versée sous 15 € ; apprentis et étudiants seulement au-delà de 78 % du SMIC | Barème CAF 2026 (previssima.fr, journaldeleconomie.fr). Au SMIC : environ 240 €. |
 | Non simulé | APL (dépend du zonage et des loyers plafonds), allocations chômage (aucune après une démission de toute façon), bourses étudiantes | **À valider** : je peux ajouter l'APL ensuite. |
 | Transports | En commun : passe Navigo 90,80 € à Paris, 50 € ailleurs (estimation), remboursé à moitié par l'employeur (ou tarif étudiant) ; voiture déjà possédée : 208 € par mois (carburant 119 €, assurance 45 €, entretien 44 €, fiches-auto.fr 2025) ; vélo 10 € ; à pied 0 € ; modifiable à tout moment | Coûts moyens réels ; achat de voiture non simulé. |
+
+## V0.13
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Notifications | À activer dans Finances (réglage propre à chaque téléphone). Chaque événement du jeu (ordre exécuté, liquidation, panne, livraison, salaire, impôts…) devient une notification quand l'appli est en arrière-plan ; rien quand elle est à l'écran (le bandeau suffit) | Sans serveur. Sur iPhone, il faut d'abord ajouter l'appli à l'écran d'accueil (iOS 16.4 et plus). |
+| Appli complètement fermée | Aucune notification : il faudrait un serveur d'envoi (Web Push). Les événements sont rejoués et résumés à la réouverture | **À décider avec toi** : un petit serveur gratuit (par exemple un worker Cloudflare) permettrait les vraies notifications push. |
+| Synchro entre appareils | Manuelle : « Exporter » sur un téléphone, « Importer » sur l'autre (fichier de sauvegarde), avec vérification du fichier et confirmation avant de remplacer la partie | Sans compte ni serveur. **À décider** : une synchro automatique demanderait un stockage en ligne (par exemple un Gist GitHub privé avec ton accord). |
+| Corrections du rejeu | Le réseau Bitcoin du jour (servant seulement à comparer les prix des machines) n'écrase plus celui de la date du jeu ; une crypto pas encore cotée à la date choisie est masquée | Trouvé en relisant la V0.11. |
