@@ -115,7 +115,7 @@ export function patrimoine(partie, prixDe, machines = 0) {
   if (partie.minage) {
     const p = prixDe('BTC');
     if (p) actifs += partie.minage.soldePool * p;
-    facture = partie.minage.factureEUR;
+    facture = partie.minage.factureEUR + (partie.minage.factureHebEUR || 0);
   }
   const plateforme = partie.plateforme.soldeEUR + bloqueEUR;
   return { banque: partie.banque.solde, plateforme, actifs, facture, machines, total: partie.banque.solde + plateforme + actifs + machines - facture };

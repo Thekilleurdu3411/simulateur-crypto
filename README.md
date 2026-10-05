@@ -1,4 +1,4 @@
-# Simulateur crypto — V0.5
+# Simulateur crypto — V0.6
 
 Jeu mobile de trading (et bientôt de minage) crypto branché sur le vrai marché, en temps réel.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -17,6 +17,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Minage Bitcoin (V0.3) : vraies machines (S19 d'occasion à S21 XP), vrais pools (Braiins, AntPool, Luxor, F2Pool, ViaBTC), gains calculés avec la vraie difficulté du réseau (mempool.space), versements à minuit UTC, électricité au Tarif Bleu EDF (Base ou Tempo avec le vrai calendrier), facture mensuelle, limite du compteur.
 - Gestion du parc (V0.4) : température de la pièce selon la météo réelle de ta ville, bridage en surchauffe, extracteur d'air, bruit et plaintes des voisins, pannes et réparations (garantie), dépoussiérage, modes éco / normal / performance, revente d'occasion.
 - Autres cryptos (V0.5) : rigs de cartes graphiques à monter soi-même (RTX 3060 Ti à RTX 4090, RX 7900 XTX) sur Ravencoin, Ethereum Classic ou Ergo, Antminer L9 en minage fusionné Litecoin + Dogecoin, échange des cryptos minées contre du BTC.
+- Installations (V0.6) : puissance du compteur (6, 9, 12 kVA, abonnement réel, prestation Enedis), hébergeurs réels (SAZ Mining, Compass, EZ Blockchain, Terra Hosting) avec envoi, engagement et facture mensuelle, machines à eau chez l'hébergeur.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -82,11 +83,10 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.6 Installations : hébergeurs, local pro, triphasé.
-2. V0.7 Dérivés avec levier.
-3. V0.8 Fiscalité.
-4. V0.9 Vie quotidienne, métiers complets et date de départ libre.
-5. V1.0 Notifications et synchro entre appareils.
+1. V0.7 Dérivés avec levier.
+2. V0.8 Fiscalité.
+3. V0.9 Vie quotidienne, métiers complets et date de départ libre.
+4. V1.0 Notifications et synchro entre appareils.
 
 ## Décisions
 

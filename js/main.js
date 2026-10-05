@@ -9,10 +9,10 @@ import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
-import { acheterRig, changerCrypto, convertirEnBTC } from './jeuminage.js';
+import { acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
 import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
-import { modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES } from './minage.js';
+import { modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES, HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur } from './minage.js';
 import { eur, prix, qte, pct, duree } from './format.js';
 
 const racine = document.getElementById('app');
@@ -266,7 +266,7 @@ function ajouterAbsence(depuis, evenements) {
 // Minage : fait avancer gains, factures et livraisons jusqu'à maintenant.
 function avancerMinage(absence = false) {
   if (!partie || !partie.minage) return [];
-  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), prixEUR, alt: D.etat.alt, temperature: D.temperatureExterieure, absence });
+  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), prixEUR, alt: D.etat.alt, eurUsd: D.etat.eurUsd, temperature: D.temperatureExterieure, absence });
 }
 
 // Météo réelle de la ville du joueur (pour la température de la pièce).
@@ -285,7 +285,9 @@ async function rattraperMinage(depuis) {
   if (mn.contrat.type === 'tempo') await D.chargerTempo(joursEntre(mn.dernierCalcul, Date.now())).catch(() => {});
   await preparerMeteo();
   const evts = avancerMinage(true);
-  if (evts.length) { sauver(partie); ajouterAbsence(depuis, evts); if (app.ecran === 'jeu') rendre(); }
+  sauver(partie);
+  if (evts.length) ajouterAbsence(depuis, evts);
+  if (app.ecran === 'jeu') rendre();
 }
 
 function virer() {
@@ -345,7 +347,7 @@ const actions = {
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
-  onglet: v => { app.onglet = v; app.crypto = null; if (v === 'minage' && partie) { const neuf = !partie.minage; minageDe(partie); if (neuf) preparerMeteo().then(() => app.onglet === 'minage' && rendre()); } rendre(); window.scrollTo(0, 0); },
+  onglet: v => { app.onglet = v; app.crypto = null; if ((v === 'minage' || v === 'installations') && partie) { const neuf = !partie.minage; minageDe(partie); if (neuf) preparerMeteo().then(() => app.onglet === 'minage' && rendre()); } rendre(); window.scrollTo(0, 0); },
   crypto: s => { if (!s) return; app.onglet = 'marche'; app.crypto = s; app.saisie = saisieVide(); rendre(); window.scrollTo(0, 0); },
   liste: () => { app.crypto = null; rendre(); },
   intervalle: v => { app.intervalle = v; rendre(); },
@@ -395,14 +397,29 @@ const actions = {
     if (r.erreur) return toast(r.erreur, 'erreur');
     sauver(partie); rendre(); toast('Échangé contre ' + qte(r.btc) + ' BTC', 'ok');
   },
+  'lieu-achat': v => { app.lieuAchat = v; rendre(); },
+  envoi: id => { app.envoi = id || null; rendre(); },
+  envoyer: v => {
+    const [id, hid] = v.split(':'); const h = hebergeur(hid);
+    confirmer('Envoyer chez ' + h.nom + ' ?', `Transport ${eur(ENVOI.eur)}${h.installUSD ? ' et installation ' + h.installUSD + ' $' : ''}, engagement ${h.engagementMois} mois. Électricité facturée par l'hébergeur chaque mois.`, 'Envoyer', () => {
+      avancerMinage(); const r = envoyer(partie, id, hid, D.etat.eurUsd); if (r.erreur) return toast(r.erreur, 'erreur'); app.envoi = null; sauver(partie); rendre();
+    });
+  },
+  rapatrier: id => { avancerMinage(); const r = rapatrier(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  compteur: v => confirmer('Passer à ' + v + ' kVA ?', `Prestation Enedis de ${eur(CHANGEMENT_PUISSANCE)}. Le nouvel abonnement s'applique tout de suite.`, 'Changer', () => {
+    avancerMinage(); const r = changerCompteur(partie, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Compteur passé à ' + v + ' kVA.', 'ok');
+  }),
   'sous-minage': v => { app.sousMinage = v; rendre(); window.scrollTo(0, 0); },
   'acheter-machine': id => {
     const m = modele(id), d = DIFFICULTES[partie.difficulte];
     if (!D.etat.eurUsd) return toast('Taux euro-dollar indisponible pour le moment. Réessaie dans un instant.', 'erreur');
     const px = prixMachineEUR(m, D.etat.eurUsd);
+    const lieu = app.lieuAchat || 'maison';
+    const hl = lieu !== 'maison' ? HEBERGEURS.find(x => x.id === lieu) : null;
+    if (hl) px.total += hl.installUSD / D.etat.eurUsd;
     const h = LIVRAISON[m.etat].jours * 24 / d.temps;
-    confirmer('Acheter ' + m.nom + ' ?', `${eur(px.total)} prélevés sur ton compte bancaire (TVA et livraison comprises). Livraison dans ${h >= 24 ? String(Math.round(h / 24 * 10) / 10).replace('.', ',') + ' jours' : Math.round(h) + ' h'}.`, 'Acheter', () => {
-      const r = acheterMachine(partie, id, D.etat.eurUsd);
+    confirmer('Acheter ' + m.nom + ' ?', `${eur(px.total)} prélevés sur ton compte bancaire (TVA, livraison${hl ? ' et installation chez ' + hl.nom : ''} comprises). Livraison dans ${h >= 24 ? String(Math.round(h / 24 * 10) / 10).replace('.', ',') + ' jours' : Math.round(h) + ' h'}.`, 'Acheter', () => {
+      const r = acheterMachine(partie, id, D.etat.eurUsd, app.lieuAchat || 'maison');
       if (r.erreur) return toast(r.erreur, 'erreur');
       sauver(partie); app.sousMinage = 'parc'; rendre(); toast('Commande passée : ' + m.nom + '.', 'ok');
     });

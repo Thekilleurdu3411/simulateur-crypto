@@ -3,7 +3,7 @@ import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VE
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
 import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
-import { ongletMinage } from './views-minage.js';
+import { ongletMinage, ongletInstallations } from './views-minage.js';
 import { valeurParc } from './jeuminage.js';
 
 const ICONES = {
@@ -50,6 +50,7 @@ export function valeurLive(cle, ctx) {
     case 'liv': { const m = partie.minage?.machines.find(x => x.id === arg); return { t: m ? duree(m.livraisonLe - Date.now()) : '' }; }
     case 'pool': { const q = partie.minage?.soldePool || 0; const p = M.prixDeBase('BTC'); return { t: qte(q) + ' BTC' + (p ? ' · ' + eur(q * p) : '') }; }
     case 'facture': { const mn = partie.minage; return { t: mn ? eur(mn.factureEUR) + ' · ' + Math.round(mn.factureKWh).toLocaleString('fr-FR') + ' kWh' : '—' }; }
+    case 'factureHeb': { const mn = partie.minage; return { t: mn ? eur(mn.factureHebEUR || 0) + ' · ' + Math.round(mn.factureHebKWh || 0).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
   const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd));
@@ -257,7 +258,7 @@ export function vueJeu(ctx) {
   const corps = {
     accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances,
     minage: c => ongletMinage(c, live),
-    installations: c => ongletBientot('Installations', '0.4', "Ton logement, ton compteur électrique, ton contrat (Base ou Tempo), puis les hébergeurs et les locaux professionnels.")
+    installations: c => ongletInstallations(c, live)
   }[app.onglet](ctx);
   return `<header class="barre-haut">
       <div class="qui"><div class="avatar">${e(initiales(partie.profil))}</div>

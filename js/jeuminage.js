@@ -1,4 +1,5 @@
 // Règles du minage dans la partie : achats, mise en marche, factures, versements.
+import { HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur, prixHebergeurEUR, supplementAbonnementParSeconde } from './minage.js';
 import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD } from './minage.js';
 import { DIFFICULTES } from './config.js';
 import { journal } from './state.js';
@@ -15,37 +16,43 @@ export function minageDe(partie) {
     const kva = COMPTEUR[partie.profil.logement] || 6;
     partie.minage = {
       pool: 'braiins', machines: [], soldePool: 0, gainsTotal: 0, factureKWh: 0, factureEUR: 0,
-      contrat: { type: 'base', kva }, dernierCalcul: Date.now(), prochaineFacture: premierDuMoisSuivant(Date.now()),
+      contrat: { type: 'base', kva }, kvaInitial: kva, dernierCalcul: Date.now(), prochaineFacture: premierDuMoisSuivant(Date.now()),
       reseau: null, couleurs: {}
     };
   }
+  if (partie.minage.kvaInitial == null) partie.minage.kvaInitial = partie.minage.contrat.kva;
   return partie.minage;
 }
+const chezSoi = m => !m.lieu || m.lieu === 'maison';
 
 const wDe = m => spec(m).w * MODES[m.mode || 'normal'].w / 1000;
+// Puissance tirée sur le compteur du logement (les machines hébergées n'en font pas partie).
 export function kwEnMarche(minage) {
-  return minage.machines.filter(m => m.statut === 'marche').reduce((s, m) => s + wDe(m), 0);
+  return minage.machines.filter(m => m.statut === 'marche' && chezSoi(m)).reduce((s, m) => s + wDe(m), 0);
 }
 export function thEnMarche(minage) {
   return minage.machines.filter(m => m.statut === 'marche').reduce((s, m) => s + spec(m).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1), 0);
 }
 
-export function acheter(partie, id, eurUsd) {
+export function acheter(partie, id, eurUsd, lieu = 'maison') {
   const m = modele(id);
   const d = DIFFICULTES[partie.difficulte];
   if (!m) return { erreur: 'Machine inconnue.' };
-  if (partie.profil.logement === 'parents') return { erreur: "Chez tes parents, pas de place pour un ASIC : bruit, chaleur et compteur partagé. Il faudra un hébergeur (version 0.6)." };
-  if (m.refroidissement === 'hydro') return { erreur: 'Cette machine demande un circuit de refroidissement à eau. Installations hydro : version 0.6.' };
+  const h = lieu !== 'maison' ? hebergeur(lieu) : null;
+  if (!h && partie.profil.logement === 'parents') return { erreur: "Chez tes parents, pas de place pour un ASIC : bruit, chaleur et compteur partagé. Fais-la livrer chez un hébergeur." };
+  if (m.refroidissement === 'hydro' && !(h && h.hydro)) return { erreur: 'Cette machine demande un circuit de refroidissement à eau : fais-la livrer chez un hébergeur équipé.' };
   if (!eurUsd) return { erreur: 'Taux euro-dollar indisponible pour le moment. Réessaie dans un instant.' };
   const p = prixMachineEUR(m, eurUsd);
+  if (h) p.total += h.installUSD / eurUsd;
   if (p.total > partie.banque.solde + 1e-9) return { erreur: 'Solde bancaire insuffisant : il faut ' + eur(p.total) + ', tu as ' + eur(partie.banque.solde) + '.' };
   partie.banque.solde -= p.total;
   const mn = minageDe(partie);
   const delai = LIVRAISON[m.etat].jours * 864e5 / d.temps;
   const machine = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), modele: id, statut: 'livraison', livraisonLe: Date.now() + delai, acheteLe: Date.now(), prixPaye: p.total,
-    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: m.etat === 'neuf' ? Date.now() + delai + GARANTIE_JOURS * 864e5 : 0 };
+    mode: 'normal', santeHash: 1, heures: 0, heuresDepuisNettoyage: 0, garantieFin: m.etat === 'neuf' ? Date.now() + delai + GARANTIE_JOURS * 864e5 : 0,
+    lieu: h ? h.id : 'maison', engagementFin: h ? Date.now() + delai + h.engagementMois * 30 * 864e5 : 0 };
   mn.machines.push(machine);
-  journal(partie, 'machine', `Achat : ${m.nom} (${m.etat}) pour ${eur(p.total)}, livraison prévue dans ${Math.round(delai / 36e5)} h`);
+  journal(partie, 'machine', `Achat : ${m.nom} (${m.etat}) pour ${eur(p.total)}, livraison ${h ? 'chez ' + h.nom + ' ' : ''}prévue dans ${Math.round(delai / 36e5)} h`);
   return { machine };
 }
 
@@ -55,7 +62,7 @@ export function demarrer(partie, id) {
   if (!m || m.statut !== 'arret') return { erreur: 'Machine indisponible.' };
   const dispo = puissanceDispo(partie.profil.logement, mn.contrat.kva);
   const apres = kwEnMarche(mn) + wDe(m);
-  if (apres > dispo + 1e-9) return { erreur: `Ton compteur de ${mn.contrat.kva} kVA ne suit pas : ${apres.toFixed(1).replace('.', ',')} kW demandés pour ${dispo} kW disponibles (2 kVA restent pour le logement). Le disjoncteur sauterait.` };
+  if (chezSoi(m) && apres > dispo + 1e-9) return { erreur: `Ton compteur de ${mn.contrat.kva} kVA ne suit pas : ${apres.toFixed(1).replace('.', ',')} kW demandés pour ${dispo} kW disponibles (2 kVA restent pour le logement). Le disjoncteur sauterait.` };
   m.statut = 'marche';
   journal(partie, 'machine', `${spec(m).nom} mise en marche`);
   return {};
@@ -74,7 +81,7 @@ export function arreter(partie, id) {
  * Fait avancer le minage jusqu'à maintenant. reseau : données réseau réelles (ou dernières connues).
  * prixBTC : prix actuel du bitcoin en euros (valeur des versements reçus).
  */
-export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, prixEUR, temperature, absence, alt }) {
+export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, prixEUR, temperature, absence, alt, eurUsd }) {
   const mn = minageDe(partie);
   if (reseau) mn.reseau = reseau;
   const r = mn.reseau;
@@ -85,6 +92,8 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
   const evts = avancer(mn, mn.dernierCalcul, maintenant, {
     reseau: r, couleurs: mn.couleurs, multMinage: d.minage, multElec: d.elec, peutRecevoir: pl.statut === 'ouvert',
     logement: partie.profil.logement, temperature, rng: Math.random, bruit: d.bruit, alt,
+    prixHebergeur: id => prixHebergeurEUR(id, eurUsd || mn.eurUsd || 1.17),
+    supplementAbonnement: supplementAbonnementParSeconde(mn.contrat, mn.kvaInitial),
     pannes: absence && d.protectionAbsence ? 0 : d.pannes,
     payer: (base, q, t) => {
       const a = pl.actifs[base] || (pl.actifs[base] = { qte: 0, cout: 0 });
@@ -95,6 +104,7 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
     }
   });
   mn.dernierCalcul = maintenant;
+  if (eurUsd) mn.eurUsd = eurUsd;
   for (const e of evts) partie.historique.unshift({ t: e.t, type: 'machine', texte: e.texte });
 
   // Facture mensuelle, prélevée sur le compte bancaire le 1er du mois
@@ -106,7 +116,14 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
       partie.historique.unshift({ t: mn.prochaineFacture, type: 'facture', texte });
       evts.push({ t: mn.prochaineFacture, texte });
     }
-    mn.factureEUR = 0; mn.factureKWh = 0;
+    if ((mn.factureHebEUR || 0) > 0.005) {
+      const montant = Math.round(mn.factureHebEUR * 100) / 100;
+      partie.banque.solde -= montant;
+      const texte = `Facture des hébergeurs : ${Math.round(mn.factureHebKWh)} kWh, ${eur(montant)} prélevés` + (partie.banque.solde < 0 ? ' (compte à découvert)' : '');
+      partie.historique.unshift({ t: mn.prochaineFacture, type: 'facture', texte });
+      evts.push({ t: mn.prochaineFacture, texte });
+    }
+    mn.factureEUR = 0; mn.factureKWh = 0; mn.factureHebEUR = 0; mn.factureHebKWh = 0;
     mn.prochaineFacture = premierDuMoisSuivant(mn.prochaineFacture + 1);
   }
   if (evts.length) partie.historique.sort((a, b) => b.t - a.t);
@@ -126,7 +143,7 @@ export function changerMode(partie, id, mode) {
   const mn = minageDe(partie);
   const m = mn.machines.find(x => x.id === id);
   if (!m || !MODES[mode]) return { erreur: 'Réglage impossible.' };
-  if (m.statut === 'marche') {
+  if (m.statut === 'marche' && chezSoi(m)) {
     const dispo = puissanceDispo(partie.profil.logement, mn.contrat.kva);
     const apres = kwEnMarche(mn) - wDe(m) + spec(m).w * MODES[mode].w / 1000;
     if (apres > dispo + 1e-9) return { erreur: `Le compteur ne suit pas en mode ${MODES[mode].nom} : ${apres.toFixed(1).replace('.', ',')} kW pour ${dispo} kW disponibles.` };
@@ -150,7 +167,8 @@ export function devisReparation(partie, m) {
   if (!p) return null;
   const garantie = m.garantieFin && Date.now() < m.garantieFin;
   const d = DIFFICULTES[partie.difficulte];
-  return { panne: p, garantie, cout: garantie ? ENVOI_SAV : p.cout, delai: (garantie ? Math.max(p.jours, 10) : p.jours) * 864e5 / d.temps };
+  const loin = m.lieu && m.lieu !== 'maison' ? 5 : 0; // le technicien de l'hébergeur passe sous quelques jours
+  return { panne: p, garantie, cout: garantie ? ENVOI_SAV : p.cout, delai: ((garantie ? Math.max(p.jours, 10) : p.jours) + loin) * 864e5 / d.temps };
 }
 
 export function reparer(partie, id) {
@@ -241,4 +259,51 @@ export function convertirEnBTC(partie, tag, prixTag, prixBTC) {
   journal(partie, 'echange', `Échange de ${a.qte.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${tag} contre ${btc.toFixed(8).replace('.', ',')} BTC`);
   delete pl.actifs[tag];
   return { btc };
+}
+
+// ---------- Installations (V0.6) ----------
+
+export function envoyer(partie, id, hostId, eurUsd) {
+  const mn = minageDe(partie);
+  const m = mn.machines.find(x => x.id === id);
+  const h = hebergeur(hostId);
+  const d = DIFFICULTES[partie.difficulte];
+  if (!m || !h || m.statut !== 'arret' || !chezSoi(m)) return { erreur: 'Arrête la machine avant de l\'envoyer.' };
+  if (spec(m).rig) return { erreur: 'Les hébergeurs n\'acceptent que des ASIC.' };
+  if (!eurUsd) return { erreur: 'Taux euro-dollar indisponible pour le moment.' };
+  const cout = ENVOI.eur + h.installUSD / eurUsd;
+  if (cout > partie.banque.solde + 1e-9) return { erreur: 'Solde bancaire insuffisant : ' + eur(cout) + '.' };
+  partie.banque.solde -= cout;
+  const delai = ENVOI.jours * 864e5 / d.temps;
+  m.statut = 'envoi'; m.envoiVers = h.id; m.envoiFin = Date.now() + delai;
+  m.engagementFin = m.envoiFin + h.engagementMois * 30 * 864e5;
+  journal(partie, 'machine', `${spec(m).nom} envoyée chez ${h.nom} (${h.pays}) : ${eur(cout)}, arrivée dans ${Math.round(delai / 36e5)} h`);
+  return {};
+}
+
+export function rapatrier(partie, id) {
+  const mn = minageDe(partie);
+  const m = mn.machines.find(x => x.id === id);
+  const d = DIFFICULTES[partie.difficulte];
+  if (!m || chezSoi(m) || m.statut !== 'arret') return { erreur: 'Arrête la machine avant de la faire revenir.' };
+  if (Date.now() < (m.engagementFin || 0)) return { erreur: 'Engagement en cours jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') + '. Tu peux la vendre sur place en attendant.' };
+  if (partie.profil.logement === 'parents') return { erreur: 'Pas de place chez tes parents pour la récupérer.' };
+  if (ENVOI.eur > partie.banque.solde) return { erreur: 'Solde bancaire insuffisant : ' + eur(ENVOI.eur) + '.' };
+  partie.banque.solde -= ENVOI.eur;
+  m.statut = 'envoi'; m.envoiVers = 'maison'; m.envoiFin = Date.now() + ENVOI.jours * 864e5 / d.temps;
+  journal(partie, 'machine', `${spec(m).nom} rapatriée chez toi : ${eur(ENVOI.eur)}`);
+  return {};
+}
+
+export function changerCompteur(partie, kva) {
+  const mn = minageDe(partie);
+  if (partie.profil.logement === 'parents') return { erreur: 'Le compteur appartient à tes parents.' };
+  if (![6, 9, 12].includes(kva) || kva === mn.contrat.kva) return { erreur: 'Puissance inchangée.' };
+  if (kva < mn.contrat.kva && kwEnMarche(mn) > kva - 2 + 1e-9) return { erreur: 'Arrête d\'abord des machines : elles dépasseraient la nouvelle puissance.' };
+  if (CHANGEMENT_PUISSANCE > partie.banque.solde) return { erreur: 'Solde bancaire insuffisant.' };
+  partie.banque.solde -= CHANGEMENT_PUISSANCE;
+  const avant = mn.contrat.kva;
+  mn.contrat.kva = kva;
+  journal(partie, 'facture', `Compteur passé de ${avant} à ${kva} kVA (prestation Enedis ${eur(CHANGEMENT_PUISSANCE)})`);
+  return {};
 }

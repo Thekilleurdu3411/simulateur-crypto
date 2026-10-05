@@ -1,6 +1,6 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre comme une vraie appli.
 // Les données de marché ne sont jamais mises en cache : elles doivent rester réelles.
-const CACHE = 'simcrypto-v0.5.0';
+const CACHE = 'simcrypto-v0.6.0';
 const FICHIERS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/main.js', './js/config.js', './js/market.js', './js/engine.js', './js/state.js',

@@ -87,3 +87,17 @@ Tout peut être changé : il suffit de le demander.
 | Pool des autres cryptos | 1 % de commission, versement chaque nuit à minuit UTC, sans seuil | Simplification ; ordre de grandeur des pools publics. |
 | Cryptos non cotées sur la plateforme | Ravencoin, ETC, Ergo s'échangent contre du BTC (0,1 % de frais, minimum 1 €) ; le prix de revient suit | Un échange crypto contre crypto n'est pas imposable en France. |
 | Minage au processeur (Monero) et Kaspa | Reportés | Données réseau prêtes, mais performances des processeurs et prix des ASIC Kaspa pas encore vérifiés. |
+
+## V0.6
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Puissance du compteur | 6, 9 ou 12 kVA en monophasé ; changement à distance du Linky à 4,28 € (Enedis), immédiat | Tarif Enedis réel ; au-delà de 12 kVA, il faut du triphasé. |
+| Abonnement | La différence d'abonnement avec la puissance de départ s'ajoute à la facture de minage (Base 190,32 / 238,56 / 285,12 € par an ; Tempo 189,60 / 236,40 / 282,00 €) | Grille officielle du 1er août 2026 ; l'abonnement de départ fait partie de la vie courante (V0.9). |
+| Hébergeurs | SAZ Mining (Paraguay, 0,047 $/kWh, 12 mois), Compass Mining (États-Unis, 0,065 $, sans engagement), EZ Blockchain (0,075 $, 12 mois, 30 $ d'installation, accepte les machines à eau), Terra Hosting (0,075 $, 6 mois, 100 $ d'installation) | Tarifs publiés (spark.money). Valeur médiane retenue quand une fourchette est donnée. |
+| Frais annexes | + 0,02 $/kWh sur tous les tarifs | La source précise que les tarifs annoncés excluent souvent 0,02 à 0,03 $/kWh de frais. |
+| Envoi d'une machine | 150 € et 10 jours (divisés par la vitesse du temps), dans les deux sens | Estimation du transport international d'un ASIC. |
+| Engagement | Retour impossible avant la fin de l'engagement ; vente sur place toujours possible | Simplification d'un contrat d'hébergement. |
+| Chez l'hébergeur | Pas de bruit ni de chaleur (salle à 25 °C), entretien compris, réparations + 5 jours | Le service vendu par un hébergeur. |
+| Rigs | Non acceptés par les hébergeurs | Les hébergeurs listés n'accueillent que des ASIC. |
+| Local professionnel et triphasé | Reportés | Bail, raccordement et contrat pro demandent encore des données réelles. |

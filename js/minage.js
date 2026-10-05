@@ -37,6 +37,26 @@ export const RESERVE_FOYER_KVA = 2; // puissance gardée pour le reste du logeme
 
 export const COMPTEUR = { parents: 6, appart: 6, maison: 9 };
 
+// Abonnements annuels du Tarif Bleu au 1er août 2026 (€ TTC) et changement de puissance Linky (Enedis).
+export const ABONNEMENTS = { base: { 6: 190.32, 9: 238.56, 12: 285.12 }, tempo: { 6: 189.60, 9: 236.40, 12: 282.00 } };
+export const CHANGEMENT_PUISSANCE = 4.28;
+
+// Hébergeurs réels (spark.money, octobre 2026). Tarifs annoncés + 0,02 $/kWh de frais annexes habituels.
+export const HEBERGEURS = [
+  { id: 'saz', nom: 'SAZ Mining', pays: 'Paraguay', usdKwh: 0.047, engagementMois: 12, installUSD: 0, hydro: false },
+  { id: 'compass', nom: 'Compass Mining', pays: 'États-Unis', usdKwh: 0.065, engagementMois: 1, installUSD: 0, hydro: false },
+  { id: 'ezb', nom: 'EZ Blockchain', pays: 'Oklahoma et Texas', usdKwh: 0.075, engagementMois: 12, installUSD: 30, hydro: true },
+  { id: 'terra', nom: 'Terra Hosting', pays: 'Texas', usdKwh: 0.075, engagementMois: 6, installUSD: 100, hydro: false }
+];
+export const FRAIS_ANNEXES_USD = 0.02;
+export const ENVOI = { eur: 150, jours: 10 };
+export function hebergeur(id) { return HEBERGEURS.find(h => h.id === id); }
+export function prixHebergeurEUR(id, eurUsd) { const h = hebergeur(id); return h && eurUsd ? (h.usdKwh + FRAIS_ANNEXES_USD) / eurUsd : 0; }
+export function supplementAbonnementParSeconde(contrat, kvaInitial) {
+  const tab = ABONNEMENTS[contrat.type] || ABONNEMENTS.base;
+  return Math.max(0, (tab[contrat.kva] || 0) - (tab[kvaInitial] || 0)) / (365 * 864e5 / 1000);
+}
+
 export function modele(id) { return CATALOGUE.find(m => m.id === id); }
 // Caractéristiques d'une machine possédée (catalogue, ou rig calculé à partir de ses cartes).
 export function spec(m) { return m.modele === 'rig' ? specRig(m) : modele(m.modele); }
@@ -104,17 +124,22 @@ export function avancer(minage, t0, t1, ctx) {
     for (const m of minage.machines) {
       if (m.statut === 'livraison' && m.livraisonLe > t && m.livraisonLe < fin) fin = m.livraisonLe;
       if (m.statut === 'reparation' && m.reparationFin > t && m.reparationFin < fin) fin = m.reparationFin;
+      if (m.statut === 'envoi' && m.envoiFin > t && m.envoiFin < fin) fin = m.envoiFin;
     }
 
-    // Livraisons et réparations terminées
+    // Livraisons, réparations et envois terminés
     for (const m of minage.machines) {
       if (m.statut === 'livraison' && m.livraisonLe <= t) {
         m.statut = 'arret';
-        evts.push({ t, texte: `Livraison reçue : ${spec(m).nom}. Tu peux la mettre en marche.` });
+        evts.push({ t, texte: `Livraison reçue${m.lieu && m.lieu !== 'maison' ? ' chez ton hébergeur' : ''} : ${spec(m).nom}. Tu peux la mettre en marche.` });
       }
       if (m.statut === 'reparation' && m.reparationFin <= t) {
         m.statut = 'arret'; m.santeHash = 1; m.panne = null;
         evts.push({ t, texte: `Réparation terminée : ${spec(m).nom} est revenue, prête à redémarrer.` });
+      }
+      if (m.statut === 'envoi' && m.envoiFin <= t) {
+        m.statut = 'arret'; m.lieu = m.envoiVers; m.envoiVers = null;
+        evts.push({ t, texte: m.lieu === 'maison' ? `${spec(m).nom} est de retour chez toi.` : `${spec(m).nom} est arrivée chez ton hébergeur. Tu peux la mettre en marche.` });
       }
     }
 
@@ -123,19 +148,24 @@ export function avancer(minage, t0, t1, ctx) {
     const nuit = h >= 22 || h < 7;
     const appart = ctx.logement === 'appart';
     const bridageNuit = minage.restrictionNuit && nuit && appart;
-    const actives = bridageNuit ? [] : minage.machines.filter(m => m.statut === 'marche');
+    const enMarche = minage.machines.filter(m => m.statut === 'marche');
+    const chezSoi = m => !m.lieu || m.lieu === 'maison';
+    const maison = bridageNuit ? [] : enMarche.filter(chezSoi);
+    const heberges = enMarche.filter(m => !chezSoi(m));
+    const actives = maison.concat(heberges);
 
-    // Température de la pièce et bridage thermique (machines refroidies par air)
-    const kwNominal = actives.reduce((s, m) => s + spec(m).w * MODES[m.mode || 'normal'].w, 0) / 1000;
+    // Température de la pièce et bridage thermique (seulement pour les machines chez toi)
+    const kwNominal = maison.reduce((s, m) => s + spec(m).w * MODES[m.mode || 'normal'].w, 0) / 1000;
     const tExt = ctx.temperature ? ctx.temperature(t) : null;
     const T = temperaturePiece(ctx.logement, minage.ventilation, tExt, kwNominal);
     const f = facteurChaleur(T);
     minage.temperature = T;
-    const th = actives.reduce((s, m) => s + spec(m).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1), 0) * f;
+    const facteur = m => (chezSoi(m) ? f : 1); // un hébergeur garde ses salles au frais
+    const th = actives.reduce((s, m) => s + spec(m).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1) * facteur(m), 0);
     const kw = kwNominal * (T > 40 ? 0.5 : 1);
 
-    // Bruit : une machine à air qui tourne la nuit en appartement
-    if (nuit && appart && actives.some(m => spec(m).bruyant !== false)) minage.nuitBruyante = true;
+    // Bruit : une machine bruyante qui tourne la nuit en appartement
+    if (nuit && appart && maison.some(m => spec(m).bruyant !== false)) minage.nuitBruyante = true;
     const hFin = paris(fin).heure;
     if (h < 7 && hFin >= 7) {
       if (minage.nuitBruyante) evts.push(...nuitDeBruit(minage, ctx, fin));
@@ -148,10 +178,11 @@ export function avancer(minage, t0, t1, ctx) {
       m.heuresDepuisNettoyage = (m.heuresDepuisNettoyage || 0) + dt / 3600;
       if (!ctx.rng || !ctx.pannes) continue;
       const md = spec(m);
+      const Tm = chezSoi(m) ? T : 25;
       const parHeure = (md.etat === 'neuf' ? 0.06 : 0.15) / 8760
-        * (T > 35 ? 3 : T > 30 ? 1.5 : 1)
+        * (Tm > 35 ? 3 : Tm > 30 ? 1.5 : 1)
         * MODES[m.mode || 'normal'].usure
-        * (1 + m.heuresDepuisNettoyage / 720 * 0.3)
+        * (1 + (chezSoi(m) ? m.heuresDepuisNettoyage : 0) / 720 * 0.3) // l'hébergeur entretient
         * ctx.pannes;
       if (ctx.rng() < parHeure * dt / 3600) evts.push(declencherPanne(m, ctx.rng(), fin));
     }
@@ -160,7 +191,7 @@ export function avancer(minage, t0, t1, ctx) {
     if (ctx.alt) {
       for (const m of actives) {
         for (const pr of spec(m).production || []) {
-          const g = coinsParSeconde(pr.h * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1) * f, ctx.alt.coins[pr.coin], undefined, ctx.multMinage) * dt;
+          const g = coinsParSeconde(pr.h * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1) * facteur(m), ctx.alt.coins[pr.coin], undefined, ctx.multMinage) * dt;
           minage.soldesAlt = minage.soldesAlt || {};
           minage.soldesAlt[pr.coin] = (minage.soldesAlt[pr.coin] || 0) + g;
         }
@@ -176,6 +207,15 @@ export function avancer(minage, t0, t1, ctx) {
       const kwh = kw * dt / 3600;
       minage.factureKWh += kwh;
       minage.factureEUR += kwh * prix * ctx.multElec;
+    }
+    // Supplément d'abonnement si le compteur a été augmenté pour les machines
+    if (ctx.supplementAbonnement) minage.factureEUR += ctx.supplementAbonnement * dt;
+    // Électricité facturée par les hébergeurs (prix tout compris au kWh)
+    for (const m of heberges) {
+      const kwh = spec(m).w * MODES[m.mode || 'normal'].w / 1000 * dt / 3600;
+      const px = ctx.prixHebergeur ? ctx.prixHebergeur(m.lieu) : 0;
+      minage.factureHebKWh = (minage.factureHebKWh || 0) + kwh;
+      minage.factureHebEUR = (minage.factureHebEUR || 0) + kwh * px;
     }
     t = fin;
 

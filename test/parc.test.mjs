@@ -53,3 +53,19 @@ test('revente : une machine en panne vaut moins', () => {
   assert.ok(hs < ok);
   assert.equal(Math.round(ok), Math.round(1910 * 0.7));
 });
+
+test('hébergeur : pas de chaleur ni de bruit, électricité au prix de l\'hébergeur', async () => {
+  const { prixHebergeurEUR, supplementAbonnementParSeconde } = await import('../js/minage.js');
+  const m = { modele: 's21pro', statut: 'marche', mode: 'normal', lieu: 'saz' };
+  const p = parc([m]);
+  const t0 = Date.parse('2026-07-15T12:00:00Z');
+  avancer(p, t0, t0 + 864e5, { reseau, couleurs: {}, multMinage: 1, multElec: 1, payer: () => {}, logement: 'appart', temperature: () => 35,
+    prixHebergeur: id => prixHebergeurEUR(id, 1.17), bruit: 'reel', rng: () => 0, pannes: 0 });
+  assert.equal(p.factureKWh, 0);
+  assert.ok(Math.abs(p.factureHebKWh - 3.531 * 24) < 0.01);
+  assert.ok(Math.abs(p.factureHebEUR - 3.531 * 24 * 0.067 / 1.17) < 0.01);
+  assert.ok(!p.plaintes);
+  // compteur passé de 6 à 9 kVA : 48,24 € de plus par an
+  const s = supplementAbonnementParSeconde({ type: 'base', kva: 9 }, 6) * 365 * 86400;
+  assert.ok(Math.abs(s - 48.24) < 0.01);
+});

@@ -1,4 +1,5 @@
 // Onglet Minage : parc, pool, contrat électrique, réseau réel, boutique.
+import { HEBERGEURS, ABONNEMENTS, CHANGEMENT_PUISSANCE, ENVOI, FRAIS_ANNEXES_USD, hebergeur, prixHebergeurEUR } from './minage.js';
 import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
 import { DIFFICULTES } from './config.js';
 import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
@@ -65,12 +66,12 @@ function parc(ctx, mn, live) {
   const parents = partie.profil.logement === 'parents';
   const usage = dispo ? Math.min(100, kw / dispo * 100) : 0;
   const couleurJ = mn.contrat.type === 'tempo' ? ctx.couleurAujourdhui : null;
-  return `${parents ? `<div class="carte alerte" style="font-size:13px">Chez tes parents, pas question d'un ASIC : bruit, chaleur et compteur partagé. Pour miner, il faudra passer par un hébergeur (version 0.6) ou déménager (version 0.9).</div>` : ''}
+  return `${parents ? `<div class="carte alerte" style="font-size:13px">Chez tes parents, pas question d'un ASIC : bruit, chaleur et compteur partagé. Pour miner, fais livrer tes machines chez un hébergeur (choix de la livraison dans la boutique).</div>` : ''}
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(LOGEMENT[partie.profil.logement])}</span><span class="badge neutre">Compteur ${mn.contrat.kva} kVA</span></div>
       <div class="ligne-kv"><span>Puissance pour les machines</span><span class="num">${n1(kw)} / ${dispo} kW</span></div>
       <div style="height:6px;border-radius:3px;background:var(--fond);overflow:hidden"><div style="width:${usage}%;height:6px;background:${usage > 90 ? 'var(--baisse)' : 'var(--ambre)'}"></div></div>
-      <p class="discret" style="font-size:12px">2 kVA restent réservés au logement. Changer de compteur : version 0.6.</p>
+      <p class="discret" style="font-size:12px">2 kVA restent réservés au logement. Puissance du compteur : onglet Installations.</p>
     </section>
     ${parents ? '' : salle(ctx, mn)}
     <section class="carte" style="border-radius:20px">
@@ -79,6 +80,7 @@ function parc(ctx, mn, live) {
         <div><span class="l">Consommation</span><span class="v">${n1(kw)} kW</span></div>
         <div><span class="l">Solde au pool</span>${live('pool', ctx, 'v')}</div>
         <div><span class="l">Facture en cours</span>${live('facture', ctx, 'v')}</div>
+        ${mn.machines.some(m => m.lieu && m.lieu !== 'maison') ? `<div><span class="l">Hébergeurs</span>${live('factureHeb', ctx, 'v')}</div>` : ''}
       </div>
       ${Object.entries(mn.soldesAlt || {}).filter(([, q]) => q > 0).map(([tag, q]) => `<div class="ligne-kv" style="font-size:13px"><span>En attente au pool</span><span class="num">${q.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${tag}</span></div>`).join('')}
       ${d.aides && th ? `<div class="ligne-kv" style="font-size:13px"><span>Gains attendus</span><span class="num">${qte(gainJour)} BTC/jour${prixBTC ? ' ≈ ' + eur(gainJour * prixBTC) : ''}</span></div>
@@ -140,7 +142,9 @@ function machineCarte(m, ctx, live) {
   const badge = m.statut === 'marche' ? '<span class="badge ok"><span class="pt"></span>En marche</span>'
     : m.statut === 'livraison' ? '<span class="badge attente">En livraison</span>'
     : m.statut === 'panne' ? '<span class="badge ko">En panne</span>'
-    : m.statut === 'reparation' ? '<span class="badge attente">En réparation</span>' : '<span class="badge neutre">Arrêtée</span>';
+    : m.statut === 'reparation' ? '<span class="badge attente">En réparation</span>'
+    : m.statut === 'envoi' ? '<span class="badge attente">En transport</span>' : '<span class="badge neutre">Arrêtée</span>';
+  const h = m.lieu && m.lieu !== 'maison' ? hebergeur(m.lieu) : null;
   const devis = m.panne ? devisReparation(ctx.partie, m) : null;
   const eurUsd = ctx.D.etat.eurUsd;
   const mode = m.mode || 'normal';
@@ -152,7 +156,10 @@ function machineCarte(m, ctx, live) {
       <div><span class="discret" style="display:block;font-size:11px">Conso</span><span class="num">${md.w.toLocaleString('fr-FR')} W</span></div>
       <div><span class="discret" style="display:block;font-size:11px">${md.th ? 'Efficacité' : 'Mine'}</span><span class="num">${md.th ? n1(md.w / md.th) + ' J/TH' : (md.production || []).map(p => p.coin).join(' + ')}</span></div>
     </div>
-    ${m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>` : `
+    <div class="ligne-kv" style="font-size:12px"><span>Emplacement</span><span>${h ? e(h.nom) + ' · ' + e(h.pays) : m.statut === 'envoi' && m.envoiVers !== 'maison' ? 'en route vers ' + e(hebergeur(m.envoiVers).nom) : 'Chez toi'}</span></div>
+    ${m.statut === 'envoi' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrivée prévue</span><span>${e(dateHeure(m.envoiFin))}</span></div>` : ''}
+    ${h && m.engagementFin ? `<div class="ligne-kv" style="font-size:12px"><span>Engagement</span><span>${Date.now() < m.engagementFin ? 'jusqu\'au ' + new Date(m.engagementFin).toLocaleDateString('fr-FR') : 'terminé'}</span></div>` : ''}
+    ${m.statut === 'envoi' ? '' : m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>` : `
     <div class="ligne-kv" style="font-size:12px"><span>Fonctionnement</span><span class="num">${Math.round(m.heures || 0).toLocaleString('fr-FR')} h · nettoyée il y a ${Math.round(m.heuresDepuisNettoyage || 0)} h</span></div>
     ${(m.santeHash ?? 1) < 1 ? `<div class="ligne-kv" style="font-size:12px"><span>Cartes de hachage</span><span class="baisse">${Math.round((m.santeHash) * 3)} sur 3 en service</span></div>` : ''}
     <div class="ligne-kv" style="font-size:12px"><span>Garantie</span><span>${m.garantieFin && Date.now() < m.garantieFin ? 'jusqu\'au ' + new Date(m.garantieFin).toLocaleDateString('fr-FR') : 'aucune'}</span></div>
@@ -165,8 +172,10 @@ function machineCarte(m, ctx, live) {
     <div class="grille-2">
       ${m.statut === 'marche' ? `<button class="bouton secondaire petit" data-action="arreter" data-v="${m.id}">Arrêter</button>`
         : m.statut === 'arret' ? `<button class="bouton petit" data-action="demarrer" data-v="${m.id}">Mettre en marche</button>` : '<span></span>'}
-      ${['marche', 'arret'].includes(m.statut) ? `<button class="bouton secondaire petit" data-action="depoussierer" data-v="${m.id}">Dépoussiérer</button>` : ''}
+      ${['marche', 'arret'].includes(m.statut) && !h ? `<button class="bouton secondaire petit" data-action="depoussierer" data-v="${m.id}">Dépoussiérer</button>` : ''}
     </div>
+    ${m.statut === 'arret' && !h && !md.rig ? (ctx.app.envoi === m.id ? choixHebergeur(m, ctx) : `<button class="lien" style="align-self:flex-start" data-action="envoi" data-v="${m.id}">Envoyer chez un hébergeur</button>`) : ''}
+    ${m.statut === 'arret' && h ? `<button class="lien" style="align-self:flex-start" data-action="rapatrier" data-v="${m.id}">Faire revenir chez toi (${eur(ENVOI.eur)})</button>` : ''}
     ${['arret', 'panne'].includes(m.statut) && eurUsd ? `<button class="lien" style="align-self:flex-start" data-action="vendre" data-v="${m.id}">Vendre d'occasion (≈ ${eur(valeurReventeEUR(m, eurUsd))})</button>` : ''}`}
   </article>`;
 }
@@ -181,10 +190,15 @@ function boutique(ctx, mn) {
   return `<div class="ligne-kv" style="font-size:13px"><span>Compte bancaire</span><span class="num">${eur(partie.banque.solde)}</span></div>
     ${constructeurRig(ctx, mn)}
     <div class="section-titre" style="margin-top:6px"><h2>ASIC</h2></div>
+    <div class="carte" style="gap:8px"><span style="font-size:13px">Livraison</span>
+      <div class="puces">${[['maison', 'Chez toi'], ...HEBERGEURS.map(h => [h.id, h.nom])].map(([id, nom]) => `<button class="puce" data-action="lieu-achat" data-v="${id}" aria-pressed="${(ctx.app.lieuAchat || 'maison') === id}">${e(nom)}</button>`).join('')}</div></div>
     ${CATALOGUE.map(m => {
       const px = eurUsd ? prixMachineEUR(m, eurUsd) : null;
       const est = d.aides ? estimer(m, ctx, mn) : null;
-      const bloque = m.refroidissement === 'hydro';
+      const lieu = ctx.app.lieuAchat || 'maison';
+      const hl = lieu !== 'maison' ? hebergeur(lieu) : null;
+      const bloque = m.refroidissement === 'hydro' && !(hl && hl.hydro);
+      if (px && hl) px.total += hl.installUSD / eurUsd;
       const jours = LIVRAISON[m.etat].jours / d.temps;
       return `<article class="carte" style="gap:10px">
         <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(m.nom)}</span><span class="badge ${m.etat === 'neuf' ? 'ok' : 'neutre'}">${m.etat === 'neuf' ? 'Neuf' : 'Occasion'}</span></div>
@@ -196,11 +210,62 @@ function boutique(ctx, mn) {
         <div class="ligne-kv"><span>Prix TTC + livraison</span><span class="num" style="color:var(--texte)">${px ? eur(px.total) : '—'}</span></div>
         <div class="ligne-kv" style="font-size:12px"><span>Délai de livraison</span><span>${jours >= 1 ? n1(jours) + ' j' : Math.round(jours * 24) + ' h'}</span></div>
         ${ligneEstimation(est)}
-        ${bloque ? '<span class="verrou" style="align-self:flex-start">Refroidissement à eau : version 0.6</span>'
-          : `<button class="bouton petit" data-action="acheter-machine" data-v="${m.id}" ${partie.profil.logement === 'parents' ? 'disabled' : ''}>Acheter</button>`}
+        ${bloque ? '<span class="verrou" style="align-self:flex-start">Refroidissement à eau : livraison chez EZ Blockchain</span>'
+          : `<button class="bouton petit" data-action="acheter-machine" data-v="${m.id}" ${partie.profil.logement === 'parents' && !hl ? 'disabled' : ''}>Acheter${hl ? ', livrée chez ' + e(hl.nom) : ''}</button>`}
       </article>`;
     }).join('')}
     <p class="discret" style="font-size:12px">Prix publics relevés début octobre 2026, convertis au taux euro-dollar du jour, TVA 20 % incluse. Paiement depuis ton compte bancaire.${d.aides ? '' : ' En Réalité, aucune estimation de rentabilité : à toi de calculer.'}</p>`;
+}
+
+function choixHebergeur(m, ctx) {
+  const eurUsd = ctx.D.etat.eurUsd;
+  return `<div class="carte" style="padding:12px;gap:8px;background:var(--fond)">
+    <div class="ligne-kv" style="font-size:13px"><strong style="color:var(--texte)">Choisis un hébergeur</strong><button class="lien" data-action="envoi" data-v="">Fermer</button></div>
+    ${HEBERGEURS.map(h => `<div class="rangee" style="padding:8px 0">
+      <span class="g"><span class="t" style="font-size:14px">${e(h.nom)} · ${e(h.pays)}</span>
+        <span class="s">${eurUsd ? String(prixHebergeurEUR(h.id, eurUsd).toFixed(3)).replace('.', ',') + ' €/kWh' : '—'} · engagement ${h.engagementMois} mois · envoi ${eur(ENVOI.eur + (eurUsd ? h.installUSD / eurUsd : 0))}</span></span>
+      <button class="bouton petit" style="min-height:36px;padding:0 12px;font-size:13px" data-action="envoyer" data-v="${m.id}:${h.id}">Envoyer</button></div>`).join('')}
+  </div>`;
+}
+
+export function ongletInstallations(ctx, live) {
+  const { partie, D } = ctx;
+  const mn = minageDe(partie);
+  const eurUsd = D.etat.eurUsd;
+  const parents = partie.profil.logement === 'parents';
+  const tab = ABONNEMENTS[mn.contrat.type] || ABONNEMENTS.base;
+  const LOG = { parents: 'Chez tes parents', appart: 'Appartement en location', maison: 'Maison avec garage' };
+  return `<h1 style="font-size:24px;font-weight:800">Installations</h1>
+    <section class="carte">
+      <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(LOG[partie.profil.logement])}</span><span class="badge neutre">${mn.contrat.kva} kVA · ${mn.contrat.type === 'tempo' ? 'Tempo' : 'Base'}</span></div>
+      <div class="ligne-kv" style="font-size:13px"><span>Puissance pour les machines</span><span class="num">${puissanceDispo(partie.profil.logement, mn.contrat.kva)} kW</span></div>
+      <div class="ligne-kv" style="font-size:13px"><span>Extraction d'air</span><span>${mn.ventilation ? 'installée' : 'aucune'}</span></div>
+    </section>
+    <section class="section">
+      <div class="section-titre"><h2>Puissance du compteur</h2></div>
+      <div class="carte liste-lignes" style="padding:0 16px;gap:0">
+        ${[6, 9, 12].map(k => `<div class="rangee">
+          <span class="g"><span class="t">${k} kVA</span><span class="s">Abonnement ${eur(tab[k])}/an · kWh ${String(TARIFS.base[k >= 9 ? 9 : 6]).replace('.', ',')} € en Base</span></span>
+          ${k === mn.contrat.kva ? '<span class="badge ok">Actuel</span>' : `<button class="bouton secondaire petit" style="min-height:36px;padding:0 12px;font-size:13px;white-space:nowrap" data-action="compteur" data-v="${k}" ${parents ? 'disabled' : ''}>Passer à ${k}</button>`}
+        </div>`).join('')}
+      </div>
+      <p class="discret" style="font-size:12px">Changement à distance du compteur Linky : ${eur(CHANGEMENT_PUISSANCE)} (Enedis). La différence d'abonnement s'ajoute à ta facture de minage. Au-delà de 12 kVA, il faut du triphasé : version ultérieure.</p>
+    </section>
+    <section class="section">
+      <div class="section-titre"><h2>Hébergeurs</h2></div>
+      <div class="carte liste-lignes" style="padding:0 16px;gap:0">
+        ${HEBERGEURS.map(h => {
+          const n = mn.machines.filter(m => m.lieu === h.id).length;
+          return `<div class="rangee" style="align-items:flex-start">
+          <span class="g"><span class="t">${e(h.nom)}</span><span class="s">${e(h.pays)} · ${h.usdKwh.toString().replace('.', ',')} $/kWh annoncés + ${String(FRAIS_ANNEXES_USD).replace('.', ',')} $ de frais annexes${eurUsd ? ' ≈ ' + prixHebergeurEUR(h.id, eurUsd).toFixed(3).replace('.', ',') + ' €/kWh' : ''}</span>
+            <span class="s">Engagement ${h.engagementMois} mois · installation ${h.installUSD ? h.installUSD + ' $ par machine' : 'incluse'}${h.hydro ? ' · accepte les machines à eau' : ''}</span></span>
+          <span class="badge ${n ? 'ok' : 'neutre'}">${n} machine${n > 1 ? 's' : ''}</span></div>`;
+        }).join('')}
+      </div>
+      <p class="discret" style="font-size:12px">Envoi d'une machine : ${eur(ENVOI.eur)} et ${ENVOI.jours} jours (divisés par la vitesse du temps). Chez l'hébergeur : pas de bruit, pas de chaleur, entretien compris, réparations un peu plus longues. Facture mensuelle sur ta banque. Tarifs relevés sur spark.money.</p>
+    </section>
+    <section class="carte info"><div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Local professionnel et triphasé</span><span class="verrou">Version ultérieure</span></div>
+      <p style="font-size:13px;color:var(--texte-2)">Bail, raccordement triphasé et contrat professionnel pour un vrai parc chez toi.</p></section>`;
 }
 
 function constructeurRig(ctx, mn) {
