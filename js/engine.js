@@ -100,7 +100,7 @@ export function vendreAuMarche({ quantite, carnet, mode, tauxFrais, pas, minNoti
 }
 
 // Valeur totale du joueur en euros, fonds bloqués dans les ordres en attente compris.
-export function patrimoine(partie, prixDe) {
+export function patrimoine(partie, prixDe, machines = 0) {
   let actifs = 0, bloqueEUR = 0;
   for (const [base, a] of Object.entries(partie.plateforme.actifs)) {
     const p = prixDe(base);
@@ -118,5 +118,5 @@ export function patrimoine(partie, prixDe) {
     facture = partie.minage.factureEUR;
   }
   const plateforme = partie.plateforme.soldeEUR + bloqueEUR;
-  return { banque: partie.banque.solde, plateforme, actifs, facture, total: partie.banque.solde + plateforme + actifs - facture };
+  return { banque: partie.banque.solde, plateforme, actifs, facture, machines, total: partie.banque.solde + plateforme + actifs + machines - facture };
 }

@@ -63,3 +63,23 @@ export async function demarrer() {
   notifier();
   setInterval(() => { Promise.allSettled([chargerReseau(), chargerEurUsd()]).then(notifier); }, 10 * 60000);
 }
+
+// ---------- Météo réelle (Open-Meteo, gratuit et sans clé) ----------
+// Sert à calculer la température de la pièce où tournent les machines.
+const temperatures = new Map(); // heure (ms, arrondie) -> °C
+export async function chargerMeteo(lieu) {
+  if (!lieu || lieu.lat == null) return false;
+  const d = await json(`https://api.open-meteo.com/v1/forecast?latitude=${lieu.lat}&longitude=${lieu.lon}&hourly=temperature_2m&past_days=31&forecast_days=2&timezone=UTC`);
+  d.hourly.time.forEach((t, i) => { const v = d.hourly.temperature_2m[i]; if (v != null) temperatures.set(Date.parse(t + 'Z'), v); });
+  etat.meteoMaj = Date.now();
+  return true;
+}
+export async function localiser(ville) {
+  const d = await json(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(ville)}&count=1&language=fr&countryCode=FR`);
+  const r = d.results && d.results[0];
+  return r ? { nom: r.name, lat: r.latitude, lon: r.longitude } : null;
+}
+export function temperatureExterieure(t) {
+  const h = Math.floor(t / 36e5) * 36e5;
+  return temperatures.has(h) ? temperatures.get(h) : null;
+}

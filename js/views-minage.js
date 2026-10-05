@@ -1,7 +1,7 @@
 // Onglet Minage : parc, pool, contrat électrique, réseau réel, boutique.
-import { CATALOGUE, POOLS, TARIFS, LIVRAISON, modele, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde } from './minage.js';
+import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur } from './minage.js';
 import { DIFFICULTES } from './config.js';
-import { minageDe, kwEnMarche, thEnMarche } from './jeuminage.js';
+import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
 import { eur, prix, qte, dateHeure, echapper as e } from './format.js';
 
 const LOGEMENT = { parents: 'Chez tes parents', appart: 'Appartement', maison: 'Maison avec garage' };
@@ -42,6 +42,7 @@ function parc(ctx, mn, live) {
       <div style="height:6px;border-radius:3px;background:var(--fond);overflow:hidden"><div style="width:${usage}%;height:6px;background:${usage > 90 ? 'var(--baisse)' : 'var(--ambre)'}"></div></div>
       <p class="discret" style="font-size:12px">2 kVA restent réservés au logement. Changer de compteur : version 0.6.</p>
     </section>
+    ${parents ? '' : salle(ctx, mn)}
     <section class="carte" style="border-radius:20px">
       <div class="repartition" style="grid-template-columns:repeat(2,minmax(0,1fr))">
         <div><span class="l">Puissance</span><span class="v">${th.toLocaleString('fr-FR')} TH/s</span></div>
@@ -85,10 +86,34 @@ function parc(ctx, mn, live) {
     </section>`;
 }
 
+function salle(ctx, mn) {
+  const { partie, D } = ctx;
+  const garage = partie.profil.logement === 'maison';
+  const T = mn.temperature;
+  const ext = D.temperatureExterieure(Date.now());
+  const f = T != null ? facteurChaleur(T) : 1;
+  const etatT = T == null ? '' : T > 40 ? 'badge ko' : T > 35 ? 'badge attente' : 'badge ok';
+  return `<section class="carte">
+    <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${garage ? 'Garage' : 'Pièce des machines'}</span>${T != null ? `<span class="${etatT}">${T.toFixed(1).replace('.', ',')} °C</span>` : ''}</div>
+    <div class="ligne-kv" style="font-size:13px"><span>Dehors${mn.lieu ? ' à ' + e(mn.lieu.nom) : ''}</span><span class="num">${ext != null ? ext.toFixed(1).replace('.', ',') + ' °C' : 'météo indisponible'}</span></div>
+    ${f < 1 ? `<div class="carte alerte" style="font-size:13px;padding:10px 12px">${T > 40 ? 'Surchauffe : les machines coupent et redémarrent en boucle.' : 'Trop chaud : les machines réduisent leur puissance.'} Ventile, passe en mode éco ou arrête une machine.</div>` : ''}
+    ${mn.ventilation ? '<div class="ligne-kv" style="font-size:13px"><span>Extraction d\'air</span><span class="badge ok">Installée</span></div>'
+      : `<button class="bouton secondaire petit" data-action="ventilation">Installer un extracteur d'air (${eur(VENTILATION.prix)})</button>`}
+    ${partie.profil.logement === 'appart' ? `<div class="ligne-kv" style="font-size:13px"><span>Plaintes des voisins</span><span>${mn.restrictionNuit ? '<span class="badge ko">Arrêt obligatoire 22 h à 7 h</span>' : (mn.plaintes || 0) + ' sur 3'}</span></div>` : ''}
+    <p class="discret" style="font-size:12px">Un ASIC à air fonctionne bien jusqu'à 35 °C, se bride au-delà et se protège au-dessus de 40 °C. Température extérieure réelle (Open-Meteo).</p>
+  </section>`;
+}
+
 function machineCarte(m, ctx, live) {
   const md = modele(m.modele);
   const badge = m.statut === 'marche' ? '<span class="badge ok"><span class="pt"></span>En marche</span>'
-    : m.statut === 'livraison' ? '<span class="badge attente">En livraison</span>' : '<span class="badge neutre">Arrêtée</span>';
+    : m.statut === 'livraison' ? '<span class="badge attente">En livraison</span>'
+    : m.statut === 'panne' ? '<span class="badge ko">En panne</span>'
+    : m.statut === 'reparation' ? '<span class="badge attente">En réparation</span>' : '<span class="badge neutre">Arrêtée</span>';
+  const devis = m.panne ? devisReparation(ctx.partie, m) : null;
+  const eurUsd = ctx.D.etat.eurUsd;
+  const mode = m.mode || 'normal';
+  const reglable = ['marche', 'arret'].includes(m.statut);
   return `<article class="carte" style="gap:10px">
     <div class="ligne-kv"><span class="g" style="display:flex;flex-direction:column;gap:2px"><span class="carte-titre" style="color:var(--texte)">${e(md.nom)}</span><span style="font-size:12px">${md.etat === 'neuf' ? 'Neuve' : 'Occasion reconditionnée'} · achetée ${e(dateHeure(m.acheteLe))}</span></span>${badge}</div>
     <div class="grille-3" style="font-size:12px">
@@ -96,9 +121,21 @@ function machineCarte(m, ctx, live) {
       <div><span class="discret" style="display:block;font-size:11px">Conso</span><span class="num">${md.w.toLocaleString('fr-FR')} W</span></div>
       <div><span class="discret" style="display:block;font-size:11px">Efficacité</span><span class="num">${n1(md.w / md.th)} J/TH</span></div>
     </div>
-    ${m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>`
-      : m.statut === 'marche' ? `<button class="bouton secondaire petit" data-action="arreter" data-v="${m.id}">Arrêter</button>`
-      : `<button class="bouton petit" data-action="demarrer" data-v="${m.id}">Mettre en marche</button>`}
+    ${m.statut === 'livraison' ? `<div class="ligne-kv" style="font-size:13px"><span>Arrive dans</span>${live('liv:' + m.id, ctx, 'num')}</div>` : `
+    <div class="ligne-kv" style="font-size:12px"><span>Fonctionnement</span><span class="num">${Math.round(m.heures || 0).toLocaleString('fr-FR')} h · nettoyée il y a ${Math.round(m.heuresDepuisNettoyage || 0)} h</span></div>
+    ${(m.santeHash ?? 1) < 1 ? `<div class="ligne-kv" style="font-size:12px"><span>Cartes de hachage</span><span class="baisse">${Math.round((m.santeHash) * 3)} sur 3 en service</span></div>` : ''}
+    <div class="ligne-kv" style="font-size:12px"><span>Garantie</span><span>${m.garantieFin && Date.now() < m.garantieFin ? 'jusqu\'au ' + new Date(m.garantieFin).toLocaleDateString('fr-FR') : 'aucune'}</span></div>
+    ${reglable ? `<div class="segment">${Object.entries(MODES).map(([id, x]) => `<button data-action="mode" data-v="${m.id}:${id}" aria-pressed="${mode === id}">${x.nom}</button>`).join('')}</div>` : ''}
+    ${devis && m.statut !== 'reparation' ? `<div class="carte alerte" style="font-size:13px;padding:10px 12px;gap:6px"><strong>${e(devis.panne.nom)}</strong>
+        <span>Réparation : ${eur(devis.cout)}${devis.garantie ? ' (garantie, frais d\'envoi seulement)' : ''}, ${Math.max(1, Math.round(devis.delai / 864e5 * 10) / 10).toString().replace('.', ',')} j sans la machine.</span>
+        <button class="bouton petit" data-action="reparer" data-v="${m.id}">Faire réparer</button></div>` : ''}
+    ${m.statut === 'reparation' ? `<div class="ligne-kv" style="font-size:13px"><span>Retour prévu</span><span>${e(dateHeure(m.reparationFin))}</span></div>` : ''}
+    <div class="grille-2">
+      ${m.statut === 'marche' ? `<button class="bouton secondaire petit" data-action="arreter" data-v="${m.id}">Arrêter</button>`
+        : m.statut === 'arret' ? `<button class="bouton petit" data-action="demarrer" data-v="${m.id}">Mettre en marche</button>` : '<span></span>'}
+      ${['marche', 'arret'].includes(m.statut) ? `<button class="bouton secondaire petit" data-action="depoussierer" data-v="${m.id}">Dépoussiérer</button>` : ''}
+    </div>
+    ${['arret', 'panne'].includes(m.statut) && eurUsd ? `<button class="lien" style="align-self:flex-start" data-action="vendre" data-v="${m.id}">Vendre d'occasion (≈ ${eur(valeurReventeEUR(m, eurUsd))})</button>` : ''}`}
   </article>`;
 }
 

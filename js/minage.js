@@ -96,20 +96,61 @@ export function avancer(minage, t0, t1, ctx) {
     let fin = Math.min(t1, t + 15 * 6e4);
     const minuitUTC = Math.floor(t / 864e5) * 864e5 + 864e5;
     if (minuitUTC < fin) fin = minuitUTC;
-    for (const m of minage.machines) if (m.statut === 'livraison' && m.livraisonLe > t && m.livraisonLe < fin) fin = m.livraisonLe;
+    for (const m of minage.machines) {
+      if (m.statut === 'livraison' && m.livraisonLe > t && m.livraisonLe < fin) fin = m.livraisonLe;
+      if (m.statut === 'reparation' && m.reparationFin > t && m.reparationFin < fin) fin = m.reparationFin;
+    }
 
-    // Livraisons arrivées
+    // Livraisons et réparations terminées
     for (const m of minage.machines) {
       if (m.statut === 'livraison' && m.livraisonLe <= t) {
         m.statut = 'arret';
         evts.push({ t, texte: `Livraison reçue : ${modele(m.modele).nom}. Tu peux la mettre en marche.` });
       }
+      if (m.statut === 'reparation' && m.reparationFin <= t) {
+        m.statut = 'arret'; m.santeHash = 1; m.panne = null;
+        evts.push({ t, texte: `Réparation terminée : ${modele(m.modele).nom} est revenue, prête à redémarrer.` });
+      }
     }
 
     const dt = (fin - t) / 1000;
-    const actives = minage.machines.filter(m => m.statut === 'marche');
-    const th = actives.reduce((s, m) => s + modele(m.modele).th, 0);
-    const kw = actives.reduce((s, m) => s + modele(m.modele).w, 0) / 1000;
+    const h = paris(t).heure;
+    const nuit = h >= 22 || h < 7;
+    const appart = ctx.logement === 'appart';
+    const bridageNuit = minage.restrictionNuit && nuit && appart;
+    const actives = bridageNuit ? [] : minage.machines.filter(m => m.statut === 'marche');
+
+    // Température de la pièce et bridage thermique (machines refroidies par air)
+    const kwNominal = actives.reduce((s, m) => s + modele(m.modele).w * MODES[m.mode || 'normal'].w, 0) / 1000;
+    const tExt = ctx.temperature ? ctx.temperature(t) : null;
+    const T = temperaturePiece(ctx.logement, minage.ventilation, tExt, kwNominal);
+    const f = facteurChaleur(T);
+    minage.temperature = T;
+    const th = actives.reduce((s, m) => s + modele(m.modele).th * MODES[m.mode || 'normal'].th * (m.santeHash ?? 1), 0) * f;
+    const kw = kwNominal * (T > 40 ? 0.5 : 1);
+
+    // Bruit : une machine à air qui tourne la nuit en appartement
+    if (nuit && appart && actives.length) minage.nuitBruyante = true;
+    const hFin = paris(fin).heure;
+    if (h < 7 && hFin >= 7) {
+      if (minage.nuitBruyante) evts.push(...nuitDeBruit(minage, ctx, fin));
+      minage.nuitBruyante = false;
+    }
+
+    // Usure et pannes
+    for (const m of actives) {
+      m.heures = (m.heures || 0) + dt / 3600;
+      m.heuresDepuisNettoyage = (m.heuresDepuisNettoyage || 0) + dt / 3600;
+      if (!ctx.rng || !ctx.pannes) continue;
+      const md = modele(m.modele);
+      const parHeure = (md.etat === 'neuf' ? 0.06 : 0.15) / 8760
+        * (T > 35 ? 3 : T > 30 ? 1.5 : 1)
+        * MODES[m.mode || 'normal'].usure
+        * (1 + m.heuresDepuisNettoyage / 720 * 0.3)
+        * ctx.pannes;
+      if (ctx.rng() < parHeure * dt / 3600) evts.push(declencherPanne(m, ctx.rng(), fin));
+    }
+
     if (th && ctx.reseau && ctx.reseau.difficulte) {
       const gain = btcParSeconde(th, ctx.reseau.difficulte, ctx.reseau.recompense, p.frais, ctx.multMinage) * dt;
       minage.soldePool += gain;
@@ -132,6 +173,72 @@ export function avancer(minage, t0, t1, ctx) {
     }
   }
   return evts;
+}
+
+// ---------- Gestion du parc (V0.4) ----------
+
+// Réglages du micrologiciel : moins de puissance mais meilleure efficacité en éco, l'inverse en performance.
+export const MODES = {
+  eco: { nom: 'Éco', th: 0.8, w: 0.7, usure: 0.7 },
+  normal: { nom: 'Normal', th: 1, w: 1, usure: 1 },
+  perf: { nom: 'Performance', th: 1.1, w: 1.2, usure: 1.6 }
+};
+
+export const PANNES = [
+  { type: 'ventilateur', nom: 'Ventilateur hors service', p: 0.40, arret: true, cout: 25, jours: 2 },
+  { type: 'hashboard', nom: 'Carte de hachage hors service', p: 0.35, arret: false, cout: 180, jours: 15 },
+  { type: 'alim', nom: 'Alimentation hors service', p: 0.20, arret: true, cout: 120, jours: 3 },
+  { type: 'controle', nom: 'Carte de contrôle hors service', p: 0.05, arret: true, cout: 80, jours: 3 }
+];
+export const GARANTIE_JOURS = 365;      // machines neuves
+export const ENVOI_SAV = 40;            // frais d'envoi d'une réparation sous garantie
+export const VENTILATION = { nom: 'Extracteur d\'air avec gaine vers l\'extérieur', prix: 120 };
+
+// Échauffement de la pièce par kW de machines (°C/kW) : chambre fermée ou garage, avec ou sans extraction.
+export function temperaturePiece(logement, ventilation, tExt, kw) {
+  const garage = logement === 'maison';
+  const base = garage ? (tExt == null ? 18 : tExt + 3) : (tExt == null ? 20 : Math.max(20, tExt + 2));
+  const k = garage ? (ventilation ? 0.8 : 2) : (ventilation ? 1.5 : 4);
+  return base + kw * k;
+}
+
+// Plage de fonctionnement d'un ASIC à air : jusqu'à 35 °C sans souci, bridage au-delà, protection au-dessus de 40 °C.
+export function facteurChaleur(T) {
+  if (T <= 35) return 1;
+  if (T <= 40) return 1 - (T - 35) / 5 * 0.4;
+  return 0.3; // la machine coupe et redémarre en boucle
+}
+
+function declencherPanne(m, tirage, t) {
+  let cumul = 0;
+  const p = PANNES.find(x => (cumul += x.p) >= tirage) || PANNES[0];
+  m.panne = { type: p.type, depuis: t };
+  if (p.arret) m.statut = 'panne';
+  else m.santeHash = Math.max(1 / 3, (m.santeHash ?? 1) - 1 / 3);
+  return { t, texte: `Panne : ${p.nom} sur ${modele(m.modele).nom}` + (p.arret ? ' (machine arrêtée)' : ' (elle tourne à puissance réduite)'), panne: true };
+}
+
+function nuitDeBruit(minage, ctx, t) {
+  if (ctx.bruit === 'off' || !ctx.rng) return [];
+  if (ctx.rng() >= 0.35) return [];
+  if (ctx.bruit === 'alertes') return [{ t, texte: 'Un voisin se plaint du bruit de tes machines cette nuit (sans conséquence dans ta difficulté).' }];
+  minage.plaintes = (minage.plaintes || 0) + 1;
+  if (minage.plaintes >= 3 && !minage.restrictionNuit) {
+    minage.restrictionNuit = true;
+    return [{ t, texte: 'Mise en demeure du syndic après 3 plaintes : tes machines doivent rester arrêtées de 22 h à 7 h.' }];
+  }
+  return [{ t, texte: `Plainte d'un voisin pour le bruit de la nuit (${minage.plaintes} sur 3 avant mise en demeure).` }];
+}
+
+export function infosPanne(m) { return m.panne ? PANNES.find(p => p.type === m.panne.type) : null; }
+
+// Valeur de revente d'une machine sur le marché de l'occasion, en dollars.
+export function valeurReventeUSD(m) {
+  const md = modele(m.modele);
+  const base = md.etat === 'neuf' ? md.prixUSD * 0.7 : md.prixUSD * 0.85;
+  const ans = (Date.now() - m.acheteLe) / (365 * 864e5);
+  const etat = m.statut === 'panne' || (m.santeHash ?? 1) < 1 ? 0.5 : 1;
+  return Math.max(40, base * Math.max(0.3, 1 - 0.15 * ans) * etat);
 }
 
 // Gains et coûts estimés par jour pour une machine (aide à la décision, masquée en Réalité).

@@ -9,8 +9,8 @@ import { traiterPeriode, rattraper } from './suivi.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
-import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre } from './jeuminage.js';
-import { modele, prixMachineEUR, LIVRAISON, jourTempo } from './minage.js';
+import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
+import { modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES } from './minage.js';
 import { eur, prix, qte, pct, duree } from './format.js';
 
 const racine = document.getElementById('app');
@@ -257,16 +257,27 @@ function ajouterAbsence(depuis, evenements) {
 }
 
 // Minage : fait avancer gains, factures et livraisons jusqu'à maintenant.
-function avancerMinage() {
+function avancerMinage(absence = false) {
   if (!partie || !partie.minage) return [];
-  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC') });
+  return avancerPartie(partie, Date.now(), { reseau: D.etat.reseau, couleurs: D.etat.couleurs, prixBTC: M.prixDeBase('BTC'), temperature: D.temperatureExterieure, absence });
+}
+
+// Météo réelle de la ville du joueur (pour la température de la pièce).
+async function preparerMeteo() {
+  if (!partie || !partie.minage) return;
+  const mn = partie.minage;
+  try {
+    if (!mn.lieu) { mn.lieu = await D.localiser(partie.profil.ville || 'Paris') || await D.localiser('Paris'); sauver(partie); }
+    await D.chargerMeteo(mn.lieu);
+  } catch (e) { /* météo indisponible : la pièce est supposée à 20 °C hors machines */ }
 }
 
 async function rattraperMinage(depuis) {
   if (!partie || !partie.minage) return;
   const mn = partie.minage;
   if (mn.contrat.type === 'tempo') await D.chargerTempo(joursEntre(mn.dernierCalcul, Date.now())).catch(() => {});
-  const evts = avancerMinage();
+  await preparerMeteo();
+  const evts = avancerMinage(true);
   if (evts.length) { sauver(partie); ajouterAbsence(depuis, evts); if (app.ecran === 'jeu') rendre(); }
 }
 
@@ -327,7 +338,7 @@ const actions = {
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
-  onglet: v => { app.onglet = v; app.crypto = null; if (v === 'minage' && partie) minageDe(partie); rendre(); window.scrollTo(0, 0); },
+  onglet: v => { app.onglet = v; app.crypto = null; if (v === 'minage' && partie) { const neuf = !partie.minage; minageDe(partie); if (neuf) preparerMeteo().then(() => app.onglet === 'minage' && rendre()); } rendre(); window.scrollTo(0, 0); },
   crypto: s => { if (!s) return; app.onglet = 'marche'; app.crypto = s; app.saisie = saisieVide(); rendre(); window.scrollTo(0, 0); },
   liste: () => { app.crypto = null; rendre(); },
   intervalle: v => { app.intervalle = v; rendre(); },
@@ -375,6 +386,24 @@ const actions = {
   },
   demarrer: id => { avancerMinage(); const r = demarrerMachine(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
   arreter: id => { avancerMinage(); const r = arreterMachine(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  mode: v => { const [id, mode] = v.split(':'); avancerMinage(); const r = changerMode(partie, id, mode); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  depoussierer: id => { avancerMinage(); depoussierer(partie, id); sauver(partie); rendre(); toast('Machine dépoussiérée : moins de risques de panne.', 'ok'); },
+  reparer: id => {
+    const m = partie.minage.machines.find(x => x.id === id); const dv = m && devisReparation(partie, m); if (!dv) return;
+    confirmer('Faire réparer ?', `${dv.panne.nom} : ${eur(dv.cout)} prélevés sur ta banque${dv.garantie ? ' (sous garantie, frais d\'envoi seulement)' : ''}. La machine sera absente pendant la réparation.`, 'Réparer', () => {
+      avancerMinage(); const r = reparer(partie, id); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre();
+    });
+  },
+  vendre: id => {
+    const m = partie.minage.machines.find(x => x.id === id); if (!m) return;
+    const v = valeurReventeEUR(m, D.etat.eurUsd);
+    confirmer('Vendre ' + modele(m.modele).nom + ' ?', `Vente sur le marché de l'occasion pour environ ${eur(v)} (frais de vente déduits), versés sur ta banque.`, 'Vendre', () => {
+      avancerMinage(); const r = vendre(partie, id, D.etat.eurUsd); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Machine vendue : ' + eur(r.montant), 'ok');
+    });
+  },
+  ventilation: () => confirmer('Installer un extracteur ?', `${VENTILATION.nom} : ${eur(VENTILATION.prix)} prélevés sur ta banque. La pièce chauffera beaucoup moins.`, 'Installer', () => {
+    avancerMinage(); const r = acheterVentilation(partie); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre();
+  }),
   pool: v => { avancerMinage(); const mn = minageDe(partie); if (mn.pool === v) return; mn.pool = v; journal(partie, 'machine', 'Changement de pool'); sauver(partie); rendre(); },
   contrat: v => {
     avancerMinage(); const mn = minageDe(partie); if (mn.contrat.type === v) return;
@@ -455,6 +484,7 @@ D.demarrer().then(() => rattraperMinage(vuAuDemarrage));
 D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {});
 setInterval(() => D.chargerTempo([jourTempo(Date.now()), jourTempo(Date.now() + 864e5)]).catch(() => {}), 36e5);
 D.ecouter(() => { if (app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
+setInterval(() => preparerMeteo(), 36e5);
 
 let dernierSauvetage = Date.now();
 setInterval(() => {

@@ -1,7 +1,7 @@
 // Données fixes du jeu : difficultés, cryptos, profils.
 // Les prix ne sont jamais ici : ils viennent toujours du marché réel.
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 
 // Point d'accès public de Binance réservé aux données de marché (sans compte, sans clé).
 export const API_REST = 'https://data-api.binance.vision';
@@ -15,25 +15,25 @@ export const DIFFICULTES = {
   decouverte: {
     id: 'decouverte', nom: 'Découverte', ligne: 'Pour apprendre sans stress',
     capital: 10000, temps: 10, minage: 4, elec: 0.5, score: 0.25,
-    frais: 0, execution: 'milieu', aides: true,
+    frais: 0, execution: 'milieu', aides: true, pannes: 0.1, bruit: 'off', protectionAbsence: true,
     effets: ['Temps hors marché ×10, minage ×4', 'Électricité −50 %, ni frais ni impôts', 'Pannes très rares', 'Aucune perte pendant ton absence']
   },
   investisseur: {
     id: 'investisseur', nom: 'Investisseur', ligne: 'Réaliste, avec un coup de pouce',
     capital: 5000, temps: 4, minage: 2, elec: 0.75, score: 0.5,
-    frais: 0.0005, execution: 'meilleur', aides: true,
+    frais: 0.0005, execution: 'meilleur', aides: true, pannes: 0.5, bruit: 'alertes', protectionAbsence: false,
     effets: ['Temps ×4, minage ×2', 'Électricité −25 %, frais divisés par deux', 'Flat tax prélevée automatiquement', 'Levier ×5 max, alerte avant liquidation']
   },
   expert: {
     id: 'expert', nom: 'Expert', ligne: 'Presque tout est réel',
     capital: 2000, temps: 2, minage: 1.25, elec: 1, score: 0.75,
-    frais: 0.001, execution: 'carnet', aides: true,
+    frais: 0.001, execution: 'carnet', aides: true, pannes: 1, bruit: 'reel', protectionAbsence: false,
     effets: ['Temps ×2, minage ×1,25', 'Électricité, frais et pannes réels', 'Impôts calculés pour toi', 'Une seule sauvegarde']
   },
   realite: {
     id: 'realite', nom: 'Réalité', ligne: 'La réalité absolue, sans aide',
     capital: 1000, temps: 1, minage: 1, elec: 1, score: 1,
-    frais: 0.001, execution: 'carnet', aides: false,
+    frais: 0.001, execution: 'carnet', aides: false, pannes: 1, bruit: 'reel', protectionAbsence: false,
     effets: ["Tout est réel, rien n'est modifiable", 'Aucune estimation de rentabilité', 'Déclaration fiscale à remplir toi-même', 'Une sauvegarde, aucun retour arrière']
   }
 };

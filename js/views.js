@@ -4,6 +4,7 @@ import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from '
 import { patrimoine } from './engine.js';
 import { TYPES, descriptionOrdre, reserveAchat } from './orders.js';
 import { ongletMinage } from './views-minage.js';
+import { valeurParc } from './jeuminage.js';
 
 const ICONES = {
   accueil: '<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>',
@@ -51,13 +52,14 @@ export function valeurLive(cle, ctx) {
     case 'facture': { const mn = partie.minage; return { t: mn ? eur(mn.factureEUR) + ' · ' + Math.round(mn.factureKWh).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
-  const P = patrimoine(partie, M.prixDeBase);
+  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd));
   switch (k) {
     case 'patrimoine': return { t: eur(P.total) };
     case 'perf': { const d = P.total - partie.capitalDepart; return { t: eurSigne(d) + ' (' + pct(d / partie.capitalDepart) + ')', cls: d >= 0 ? 'hausse' : 'baisse' }; }
     case 'banque': return { t: eur(P.banque) };
     case 'plat': return { t: eur(P.plateforme) };
     case 'actifs': return { t: eur(P.actifs) };
+    case 'machines': return { t: eur(P.machines) };
     case 'val': { const a = partie.plateforme.actifs[arg], p = M.prixDeBase(arg); return { t: a && p ? eur(a.qte * p) : '—' }; }
     case 'pv': {
       const a = partie.plateforme.actifs[arg], p = M.prixDeBase(arg);
@@ -288,10 +290,11 @@ function ongletAccueil(ctx) {
       <span class="discret" style="font-size:13px">Patrimoine total</span>
       ${live('patrimoine', ctx, 'gros-chiffre')}
       <span class="num" style="font-size:13px">${live('perf', ctx)} <span class="discret">depuis le départ</span></span>
-      <div class="repartition">
+      <div class="repartition" style="grid-template-columns:repeat(2,minmax(0,1fr))">
         <div><span class="l">Banque</span>${live('banque', ctx, 'v')}</div>
         <div><span class="l">Plateforme</span>${live('plat', ctx, 'v')}</div>
         <div><span class="l">Cryptos</span>${live('actifs', ctx, 'v')}</div>
+        <div><span class="l">Machines (revente)</span>${live('machines', ctx, 'v')}</div>
       </div>
     </section>
     ${guide ? `<section class="carte"><div class="carte-titre">Pour bien démarrer</div>

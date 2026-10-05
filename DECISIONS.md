@@ -53,3 +53,20 @@ Tout peut être changé : il suffit de le demander.
 | Facture | Seule la consommation des machines est facturée, chaque 1er du mois, sur le compte bancaire ; découvert possible | L'abonnement et le reste du logement arrivent avec la vie quotidienne (V0.9). |
 | BTC reçus du pool | Prix de revient = valeur au moment du versement | Règle fiscale française pour les revenus de minage. |
 | Machines dans le patrimoine | Pas encore comptées | Leur valeur de revente viendra avec le marché de l'occasion (V0.4). |
+
+## V0.4
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Température extérieure | Météo réelle heure par heure de la ville du profil (Open-Meteo, gratuit et sans clé) | Réalisme : un ASIC ne se comporte pas pareil en août et en janvier. |
+| Température de la pièce | Appartement : 20 °C minimum (ou dehors + 2 °C), + 4 °C par kW de machines (+ 1,5 °C avec extracteur). Garage : dehors + 3 °C, + 2 °C par kW (+ 0,8 °C avec extracteur) | Modèle simplifié à calibrer en jouant ; l'ordre de grandeur est celui d'une pièce fermée. |
+| Seuils de chaleur | Normal jusqu'à 35 °C, bridage progressif jusqu'à −40 % à 40 °C, au-delà la machine coupe et redémarre en boucle (30 % de sa puissance, 50 % de sa consommation) | Plage de fonctionnement d'un ASIC à air (0 à 40 °C). |
+| Extracteur d'air | 120 € | Prix courant d'un extracteur avec gaine. Estimation. |
+| Modes | Éco : 80 % de puissance pour 70 % de consommation. Performance : 110 % pour 120 %. Usure ×0,7 et ×1,6 | Ordres de grandeur des micrologiciels de réglage. |
+| Pannes | Taux annuel 6 % (neuf) et 15 % (occasion), ×1,5 au-dessus de 30 °C, ×3 au-dessus de 35 °C, + 30 % par mois sans dépoussiérage, × mode, × difficulté (0,1 / 0,5 / 1 / 1) | Ordres de grandeur ; à calibrer. |
+| Types de pannes | Ventilateur 40 % (25 €, 2 j), carte de hachage 35 % (la machine continue à 2/3, 180 €, 15 j), alimentation 20 % (120 €, 3 j), carte de contrôle 5 % (80 €, 3 j) | Pannes les plus fréquentes des ASIC ; prix estimés. |
+| Garantie | 1 an sur les machines neuves (réparation gratuite, 40 € d'envoi, au moins 10 jours), aucune sur l'occasion | Garantie constructeur habituelle. |
+| Absence en Découverte | Aucune panne pendant l'absence | Tableau des difficultés : « aucune perte pendant ton absence ». |
+| Bruit | Appartement, machine à air la nuit (22 h à 7 h) : 35 % de risque de plainte par nuit. Investisseur : simple alerte. Expert et Réalité : 3 plaintes = mise en demeure, plus de minage la nuit | Tableau des difficultés (bruit et chaleur). |
+| Revente | Neuve : 70 % du prix neuf, occasion : 85 %, −15 % par an (plancher 30 %), −50 % si en panne, minimum 40 $, puis 10 % de frais de vente ; vente immédiate | Décote rapide du matériel de minage. Simplification : pas de délai d'annonce. |
+| Patrimoine | Les machines comptent à leur valeur de revente (prix payé tant qu'elles sont en livraison) | Ce que tu récupérerais en vendant. |
