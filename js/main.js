@@ -95,6 +95,12 @@ function rendre() {
 
 function rendreSuperpositions() { superpositions.innerHTML = vueSuperpositions(app); }
 
+// Capital de départ libre : chiffres avec espaces, virgule décimale ; borné aux entiers exacts du navigateur.
+function lireCapital(texte) {
+  const n = Number(String(texte).replace(/[\s\u202f€]/g, '').replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.round(n * 100) / 100, Number.MAX_SAFE_INTEGER / 100) : 0;
+}
+
 // Date de départ d'une partie en rejeu : entre la première date jouable et la veille.
 function verifierJour(jour) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(jour || '')) return 'Choisis une date de départ.';
@@ -432,8 +438,8 @@ const actions = {
     changerEcran('partie');
   },
   'vers-profil': () => changerEcran('profil'),
-  capital: v => { app.brouillon.capital = Number(v); rendre(); },
-  difficulte: v => { const b = app.brouillon; b.difficulte = v; b.capital = DIFFICULTES[v].capital; b.reglages = nettoyerReglages(v, { ...DIFFICULTES[v], ...b.reglages }); rendre(); },
+  capital: v => { app.brouillon.capital = Number(v); app.brouillon.capitalSaisie = null; rendre(); },
+  difficulte: v => { const b = app.brouillon; b.difficulte = v; b.capital = DIFFICULTES[v].capital; b.capitalSaisie = null; b.reglages = nettoyerReglages(v, { ...DIFFICULTES[v], ...b.reglages }); rendre(); },
   'vers-reglages': () => changerEcran('reglages'),
   'fin-reglages': () => changerEcran('partie'),
   'reg-reset': () => { app.brouillon.reglages = {}; rendre(); },
@@ -642,7 +648,8 @@ document.addEventListener('input', ev => {
   }
   else if (k === 'car-metier') { carriere().metier = el.value; rendre(); }
   else if (k === 'capital') {
-    app.brouillon.capital = Number(el.value);
+    app.brouillon.capitalSaisie = el.value;
+    app.brouillon.capital = lireCapital(el.value);
     const t = racine.querySelector('[data-capital]');
     if (t) t.textContent = eur(app.brouillon.capital);
     racine.querySelectorAll('[data-action="capital"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === app.brouillon.capital)));

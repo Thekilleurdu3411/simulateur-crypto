@@ -1,4 +1,4 @@
-# Proof of Life — V0.13
+# Proof of Life — V0.14
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -7,7 +7,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 
 - Écran de lancement : continuer la partie ou en commencer une nouvelle (une seule sauvegarde).
 - Création du profil : prénom, nom, âge, ville, situation (sans emploi, étudiant, alternant, salarié), métier, logement, mode de vie.
-- Nouvelle partie : capital de départ libre et quatre difficultés (Découverte, Investisseur, Expert, Réalité).
+- Nouvelle partie : capital de départ libre (sans limite) et quatre difficultés (Découverte, Investisseur, Expert, Réalité).
 - Finances : compte bancaire, ouverture d'un compte plateforme avec vérification d'identité (délai réel divisé par la vitesse du temps), virements SEPA instantanés.
 - Marché : 11 à 12 cryptos en euros avec prix et variation 24 h en direct, graphique en chandeliers (15 min à 1 semaine).
 - Ordres au marché : exécutés sur le vrai carnet d'ordres en Expert et Réalité (glissement réel), au meilleur prix en Investisseur, au prix moyen en Découverte. Frais réels (0,1 %), pas de quantité et montant minimum réels de chaque paire.
@@ -25,6 +25,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Date de départ libre (V0.11) : la partie peut commencer n'importe quel jour depuis le 5 janvier 2020 ; le marché rejoue les vraies bougies minute par minute, avec le réseau Bitcoin, la météo, l'euro-dollar et les jours Tempo de l'époque, et seules les machines déjà sorties.
 - Vie plus complète (V0.12) : 132 métiers sourcés, impôt sur le salaire prélevé à la source, RSA et prime d'activité, transports (en commun, voiture, vélo, à pied).
 - Notifications et synchro manuelle (V0.13) : notifications du téléphone quand l'appli est en arrière-plan, import d'une sauvegarde exportée depuis un autre appareil.
+- Métiers et capital (V0.14) : 162 métiers dont des métiers très bien payés (médecins spécialistes, notaire, banquier d'affaires, PDG, sportifs professionnels…), capital de départ libre sans limite.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées

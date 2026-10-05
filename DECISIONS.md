@@ -217,3 +217,14 @@ Tout peut être changé : il suffit de le demander.
 | Rejeu avant 2020 | Oui, jusqu'à 2017 : prix en dollars convertis au cours euro-dollar de l'époque, machines S9 et S17 ajoutées |
 | Vie en rejeu | SMIC, tarifs d'électricité et loyers de l'année choisie |
 | Score d'une partie personnalisée | Classement à part, sans coefficient de score |
+
+## V0.14
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Métiers très bien payés | 30 métiers de plus (162 au total), dont un secteur « Direction d'entreprise » : médecins spécialistes libéraux (radiothérapeute, radiologue, anesthésiste, chirurgien…), notaire et avocat associés, banquier d'affaires, trader, directeur financier, PDG de grand groupe coté, commandant de bord, contrôleur aérien, ambassadeur, préfet, footballeur de Ligue 1, joueur du Top 14… | Demande de Valentin. |
+| Sources | DREES (revenus 2021 des médecins), CARMF, CARCDSF, Insee, Autorité de la concurrence (notaires), APEC 2025, Robert Walters, Michael Page et Robert Half 2026, Dogfinance, eFinancialCareers 2026, Cour des comptes 2026 (contrôleurs aériens), Sénat 2019 (ambassadeurs), DGAFP 2019 (préfets), L'Équipe et Midi Olympique (sport), Proxinvest (PDG) | Libéraux : revenus déjà nets de cotisations, CSG non déductible retirée. Privé : brut × 0,76. |
+| Limites | Médecins libéraux : paliers d'expérience déduits de la moyenne. Bonus de banquier d'affaires supposé à 50 % du fixe. PDG : les paliers suivent la taille du groupe, pas l'ancienneté. Footballeur : PSG exclu. Contrôleur aérien débutant : élève de l'ENAC ramené au SMIC. Rachat de parts (notaire, pharmacien) non simulé | Ordres de grandeur réalistes, **à valider**. |
+| Impôt des très hauts revenus | Barème jusqu'à 45 % ; la contribution exceptionnelle sur les hauts revenus (3 à 4 %) n'est pas encore simulée | À ajouter avec les prochaines étapes de la vie. |
+| Capital de départ | Montant libre, sans limite, saisi au clavier (espaces et virgule acceptés), raccourcis de 1 000 € à 10 M€ | Demande de Valentin. |
+| À venir (demande de Valentin) | Événements propres à chaque métier pendant la partie, formations pour changer de métier ou progresser | Prochaine grosse étape de la vie quotidienne. |

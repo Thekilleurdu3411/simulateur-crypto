@@ -205,7 +205,7 @@ export function vueProfil(ctx) {
 export function vueNouvellePartie(ctx) {
   const b = ctx.app.brouillon, p = b.profil, d = DIFFICULTES[b.difficulte];
   const chg = changements(b.difficulte, b.reglages);
-  const chips = [1000, 5000, 10000, 50000];
+  const chips = [1000, 10000, 100000, 1000000, 10000000];
   return `<main class="ecran">
     <div class="entete">
       <button class="retour" data-action="vers-profil">${icone('retour', 18)} Profil</button>
@@ -228,9 +228,9 @@ export function vueNouvellePartie(ctx) {
       <div class="section-titre"><h2>Capital de départ</h2></div>
       <div class="carte">
         <div class="ligne-kv"><span class="num" style="font-size:30px;font-weight:600;color:var(--texte)" data-capital>${eur(b.capital)}</span><span style="font-size:12px">proposé : ${eur(d.capital)}</span></div>
-        <label class="champ">Glisse pour régler ton épargne de départ
-          <input id="f-capital" type="range" min="0" max="100000" step="500" value="${b.capital}" data-input="capital"></label>
-        <div class="puces">${chips.map(v => `<button class="puce" data-action="capital" data-v="${v}" aria-pressed="${b.capital === v}">${v.toLocaleString('fr-FR')} €</button>`).join('')}</div>
+        <label class="champ">Montant libre, sans limite
+          <input id="f-capital" class="num" inputmode="decimal" autocomplete="off" value="${e(b.capitalSaisie ?? String(b.capital))}" data-input="capital" placeholder="0"></label>
+        <div class="puces">${chips.map(v => `<button class="puce" data-action="capital" data-v="${v}" aria-pressed="${b.capital === v}">${v >= 1e6 ? (v / 1e6).toLocaleString('fr-FR') + ' M€' : v.toLocaleString('fr-FR') + ' €'}</button>`).join('')}</div>
       </div>
     </section>
     <section class="section">
