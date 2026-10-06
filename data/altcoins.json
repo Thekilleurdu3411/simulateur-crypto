@@ -1,62 +1,62 @@
 {
   "source": "whattomine.com (coins.json et asic.json)",
-  "maj": 1791281830166,
+  "maj": 1791305457999,
   "coins": {
     "RVN": {
       "nom": "Ravencoin",
       "algo": "KawPow",
       "blockTime": 60,
       "reward": 1250,
-      "nethash": 681023044728,
-      "btc": 2.8405265479534743e-8
+      "nethash": 640066128517,
+      "btc": 2.771815212319179e-8
     },
     "ETC": {
       "nom": "Ethereum Classic",
       "algo": "Etchash",
-      "blockTime": 13.6386,
+      "blockTime": 13.563,
       "reward": 1.589248,
-      "nethash": 144636137805753,
-      "btc": 0.0001034381458860686
+      "nethash": 141042724443559,
+      "btc": 0.00010317670864175254
     },
     "ERG": {
       "nom": "Ergo",
       "algo": "Autolykos",
-      "blockTime": 125,
+      "blockTime": 119,
       "reward": 3,
-      "nethash": 534281449373,
-      "btc": 0.000003830794947994057
+      "nethash": 646304321432,
+      "btc": 0.000003654286947776376
     },
     "LTC": {
       "nom": "Litecoin",
       "algo": "Scrypt",
-      "blockTime": 156,
+      "blockTime": 159,
       "reward": 6.25,
-      "nethash": 2671425121921020,
-      "btc": 0.0008179094772531989
+      "nethash": 2621020874337605,
+      "btc": 0.0008132568333473584
     },
     "DOGE": {
       "nom": "Dogecoin",
       "algo": "Scrypt",
       "blockTime": 63,
       "reward": 10000,
-      "nethash": 2300086580580587,
-      "btc": 0.0000011061052924920461
+      "nethash": 2750687229882961,
+      "btc": 0.000001112159065006742
     },
     "XMR": {
       "nom": "Monero",
       "algo": "RandomX",
-      "blockTime": 117,
-      "reward": 0.60043658,
-      "nethash": 6891225792,
-      "btc": 0.006450384338496551
+      "blockTime": 121,
+      "reward": 0.60529366,
+      "nethash": 6446465714,
+      "btc": 0.006520060237961657
     },
     "KAS": {
       "nom": "Kaspa",
       "algo": "kHeavyHash",
-      "blockTime": 0.1,
-      "reward": 2.679072827,
-      "nethash": 322082013563609700,
-      "btc": 5.021945612038735e-7
+      "blockTime": 0.1001,
+      "reward": 2.06017223,
+      "nethash": 337083264909121500,
+      "btc": 5.098027910535679e-7
     }
   }
 }
