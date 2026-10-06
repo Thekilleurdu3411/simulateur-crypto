@@ -4,7 +4,8 @@ import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from '
 import { vueReglages, valeurTexte } from './views-reglages.js';
 import { reglerHorloge, enRejeu, accelere, visibilite, changerVitesse, vitesseActuelle } from './horloge.js';
 import { creerSimulation, prixSimu } from './simu.js';
-import { avancerSocial, repondre, resilierVip, retirerFonds, publier, valeurFonds } from './jeusocial.js';
+import { avancerSocial, repondre, resilierVip, retirerFonds, publier, valeurFonds, classement } from './jeusocial.js';
+import { avancerCompetition, accepterDefi, refuserDefi, changerRival } from './competition.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche, patrimoine } from './engine.js';
@@ -468,6 +469,18 @@ const actions = {
     if (r.erreur) return toast(r.erreur, 'erreur');
     sauver(partie); rendre(); if (r.texte) toast(r.texte, '');
   },
+  'sous-compet': v => { app.sousCompet = v; rendre(); },
+  'defi-choix': v => { app.defiChoix = v; rendre(); },
+  'defi-accepter': v => {
+    const sim = partie.simulation, pt = patrimoineTotal();
+    const r = accepterDefi(partie, Number(v), app.defiChoix, {
+      prix: prixEUR, liste: classement(partie, prixEUR, pt || 0),
+      enSimulation: M.enSimulation(tJeu()), prixFutur: sim ? x => prixSimu(sim, 'BTCEUR', x) : null
+    }, tJeu());
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    app.defiChoix = null; sauver(partie); rendre(); toast('Défi accepté !', 'ok');
+  },
+  'defi-refuser': () => { refuserDefi(partie); sauver(partie); rendre(); },
   'vip-resilier': () => { resilierVip(partie); sauver(partie); rendre(); },
   'fonds-retirer': () => { const r = retirerFonds(partie, prixEUR); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Part récupérée : ' + eur(r.montant), 'ok'); },
   'pub-type': v => { app.publication = { ...(app.publication || { base: 'BTC', sens: 'hausse' }), type: v }; rendre(); },
@@ -733,7 +746,7 @@ document.addEventListener('input', ev => {
   else if (k === 'rig-nb') { app.rig.nb = Number(el.value); const t = racine.querySelector('[data-rig-nb]'); if (t) t.textContent = el.value; }
 });
 
-document.addEventListener('change', ev => { const k = ev.target.dataset && ev.target.dataset.input; if (k && (['rig-nb', 'perp-levier'].includes(k) || k.startsWith('reg:'))) rendre(); });
+document.addEventListener('change', ev => { const k = ev.target.dataset && ev.target.dataset.input; if (k === 'rival' && partie) { changerRival(partie, ev.target.value); sauver(partie); rendre(); return; } if (k && (['rig-nb', 'perp-levier'].includes(k) || k.startsWith('reg:'))) rendre(); });
 
 // ---------- Démarrage ----------
 
@@ -786,6 +799,16 @@ function avancerSocialJeu() {
     patrimoine: patrimoineTotal(), cryptos: actifs, plateforme: actifs + partie.plateforme.soldeEUR,
     machines: partie.minage ? partie.minage.machines.length : 0
   });
+  // Compétition : ligue, rival, défis, trophées (seulement quand le patrimoine est connu)
+  const pt = patrimoineTotal();
+  if (pt != null && prixEUR('BTC')) {
+    try {
+      evts.push(...avancerCompetition(partie, t, {
+        prix: prixEUR, liste: classement(partie, prixEUR, pt), patrimoine: pt,
+        machines: partie.minage ? partie.minage.machines.length : 0
+      }));
+    } catch (e) { console.warn('compétition', e); }
+  }
   if (evts.length) { sauver(partie); toast(evts[evts.length - 1], ''); if (app.ecran === 'jeu') rendre(); }
 }
 

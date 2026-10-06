@@ -1,4 +1,4 @@
-# Proof of Life — V0.18
+# Proof of Life — V0.19
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -30,6 +30,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Métier et carrière (V0.16) : onglet Vie, diplômes exigés par métier, 37 formations (temps plein, cours du soir, alternance, CPF), progression débutant → confirmé → expérimenté, entretien annuel, demande d'augmentation, heures sup, événements du métier chaque mois, licenciement avec indemnité et chômage.
 - Vie et activités (V0.17) : jauges de santé, énergie, moral et stress avec conséquences (burn-out, maladie, erreurs de trading), 17 activités et vacances avec congés payés, achat de logement à crédit, déménagement, voiture.
 - Réseau social et personnalités (V0.18) : onglet Social avec 20 personnalités fictives de la crypto (fil d'actualité qui réagit au marché, messages privés avec choix de réponses, arnaques, tuyaux, propositions d'affaires), abonnés et réputation, publications et prédictions, classement des fortunes.
+- Compétition (V0.19) : ligue trimestrielle Kryptal contre les personnalités (performance du trading, divisions Bronze à Diamant, primes, montées et descentes), rival, défis avec mise (duels, paris, pronostics), 19 trophées, réactions des personnalités que tu dépasses.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -102,6 +103,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/carriere.js`, `js/views-carriere.js` | Diplômes, formations, progression et événements du métier (testé), onglet Vie |
 | `js/bienetre.js`, `js/biens.js` | Jauges de vie, activités, crédit immobilier et voiture (testés) |
 | `js/personnalites.js`, `js/jeusocial.js`, `js/views-social.js` | Personnalités fictives, publications, messages et classement (testé), onglet Social |
+| `js/competition.js` | Ligue, rival, défis et trophées (testé) |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -109,9 +111,8 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. V0.19 : compétition contre les personnalités (défis, rivalités, trophées).
-2. V0.20 : entreprise crypto (société, hangars de minage, traders salariés, fonds, plateforme d'échange).
-3. Validés, à faire : bourse du Crous, APL, rejeu jusqu'en 2017 (machines S9, S17), notifications push par serveur.
+1. V0.20 : entreprise crypto (société, hangars de minage, traders salariés, fonds, plateforme d'échange).
+2. Validés, à faire : bourse du Crous, APL, rejeu jusqu'en 2017 (machines S9, S17), notifications push par serveur.
 
 ## Décisions
 

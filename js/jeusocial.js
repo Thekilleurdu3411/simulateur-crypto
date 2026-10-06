@@ -12,7 +12,7 @@ const borne = (x, a = 0, b = 100) => Math.max(a, Math.min(b, x));
 export function socialDe(partie) {
   return partie.social || (partie.social = { abonnes: 15, reputation: 50, fil: [], messages: [], jour: jourDe(partie.creeLe || tJeu()), a2f: false, predictions: [], derniers: {}, prixDepart: null, publies: {} });
 }
-const seedDe = partie => (partie.simulation ? partie.simulation.seed : 0) ^ ((partie.creeLe / 1000) | 0);
+export const seedDe = partie => (partie.simulation ? partie.simulation.seed : 0) ^ ((partie.creeLe / 1000) | 0);
 
 /** Rapports des prix actuels à ceux du départ (pour les fortunes des personnalités). */
 export function rapports(partie, prix) {
@@ -61,6 +61,7 @@ export function avancerSocial(partie, t, ctx) {
       pr.fini = true;
       const juste = pr.sens === 'hausse' ? p > pr.prix : p < pr.prix;
       s.reputation = borne(s.reputation + (juste ? 4 : -5));
+      if (juste) s.justes = (s.justes || 0) + 1;
       const gain = juste ? Math.round(s.abonnes * 0.05 + 20) : -Math.round(s.abonnes * 0.03);
       s.abonnes = Math.max(0, s.abonnes + gain);
       evts.push(juste ? `Ton pronostic sur ${pr.base} était juste : +${gain} abonnés, ta réputation monte.` : `Ton pronostic sur ${pr.base} était faux : des abonnés te quittent.`);

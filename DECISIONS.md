@@ -312,3 +312,15 @@ Tout peut être changé : il suffit de le demander.
 | Abonnés et réputation | Tes publications (avis, gains, conseils, mèmes, 3 par jour au maximum) et tes prédictions à 7 jours font gagner ou perdre abonnés et réputation ; une prédiction juste rapporte, une fausse coûte | Préparer la compétition (V0.19). |
 | Classement | Patrimoine du joueur comparé aux fortunes des personnalités | Choix de Valentin : compétition contre les personnalités. |
 | Installations | Le menu des installations passe dans l'onglet Minage (sous-onglet « Sites ») pour laisser la place à l'onglet Social | Six onglets au maximum sur téléphone. |
+
+## V0.19 — Compétition contre les personnalités
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Ligue Kryptal | Une ligue par trimestre civil (du jeu) : toi contre les 20 personnalités, classés à la performance et non à la fortune ; divisions Bronze, Argent, Or, Platine, Diamant ; les 3 premiers montent et touchent une prime (300 € à 30 000 € pour le 1er selon la division, moitié pour le 2e, quart pour le 3e) ; à partir du 17e sur 21, on descend | Une compétition juste même avec peu d'argent. Primes **à ajuster**. |
+| Ta performance | Indice pondéré dans le temps du portefeuille au comptant de la plateforme (ordres en attente compris) : les virements, le minage et les perpétuels ne comptent pas ; il faut au moins 100 € sur la plateforme pour être classé | Mesurer le talent de trader, pas l'argent versé. |
+| Performance des personnalités | Variation de leur fortune (le marché selon leur exposition) plus un talent propre au trimestre, plus large pour les flambeurs (Max, Tom, le Renard) que pour les prudents (Paul, Elena) | Classements variés et crédibles. |
+| Rival | Zoé par défaut, modifiable ; duel à chaque fin de trimestre, bilan victoires et défaites, piques sur le fil environ une fois par semaine | Choix de Valentin : compétition contre les personnalités. |
+| Défis | Environ un tous les 12 jours, à accepter sous 3 jours avec une mise de 50, 250, 1 000 ou 5 000 € prise sur le compte bancaire : duel de trading sur 14 jours ou un mois (le gagnant prend la mise), pari +10 % en un mois (cote 4), pari +20 % d'abonnés (cote 2), pronostic du bitcoin à 7 jours (hausse, stable, baisse ; si les deux ont raison ou tort, mise rendue) ; l'adversaire voit juste selon sa fiabilité quand l'avenir est simulé | Enjeu réel sans casino. |
+| Trophées | 19 trophées (premiers 100 000 €, millionnaire, 1 BTC, top 10, numéro un, divisions, champion, rival battu 3 fois, 5 défis, 10 pronostics justes, abonnés, 10 machines, propriétaire, réputation 90) ; chacun donne 1 point de réputation | Objectifs à long terme. |
+| Dépassements | Une personnalité que tu dépasses au classement des fortunes réagit sur le fil (une seule fois par partie) ; le champion de la ligue est félicité par Kryptal | Monde vivant. |
