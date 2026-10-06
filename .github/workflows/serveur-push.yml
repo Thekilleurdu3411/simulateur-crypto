@@ -1,0 +1,71 @@
+name: Serveur de notifications
+
+# Déploie le worker Cloudflare qui envoie les notifications push (mode Réalité, appli fermée).
+# Secrets du dépôt nécessaires : CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, FIREBASE_SA.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'serveur-push/**'
+      - '.github/workflows/serveur-push.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: serveur-push
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Secrets présents ?
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::Secrets Cloudflare absents : rien à déployer pour l'instant."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v5
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          node-version: 22
+
+      - name: Déployer le worker
+        if: steps.secrets.outputs.ok == 'true'
+        working-directory: serveur-push
+        run: |
+          npm install --no-audit --no-fund --no-save wrangler@4 > /dev/null
+          NOM=proof-of-life-push-abonnes
+          trouver() { npx wrangler kv namespace list 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const l=JSON.parse(s.slice(s.indexOf('[')));const n=l.find(x=>x.title===process.argv[1]);process.stdout.write(n?n.id:'')}catch(e){}})" "$NOM"; }
+          ID=$(trouver)
+          if [ -z "$ID" ]; then npx wrangler kv namespace create "$NOM"; ID=$(trouver); fi
+          if [ -z "$ID" ]; then echo "::error::Impossible de créer l'espace KV (le jeton a-t-il le droit « Workers KV Storage » ?)"; exit 1; fi
+          sed -i "s/__KV_ID__/$ID/" wrangler.toml
+          npx wrangler deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          if [ -z "$URL" ]; then echo "::error::Adresse du worker introuvable. Ouvre une fois Workers & Pages sur Cloudflare pour créer ton sous-domaine workers.dev."; exit 1; fi
+          if [ -n "$FIREBASE_SA" ]; then printf '%s' "$FIREBASE_SA" | npx wrangler secret put FIREBASE_SA; else echo "::warning::Secret FIREBASE_SA absent : le serveur ne pourra pas envoyer de notifications."; fi
+          echo "URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Donner l'adresse au jeu
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          printf '{ "url": "%s" }\n' "$URL" > data/push.json
+          if git diff --quiet -- data/push.json 2>/dev/null && git ls-files --error-unmatch data/push.json > /dev/null 2>&1; then echo "Adresse inchangée."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/push.json
+          git commit -m "Adresse du serveur de notifications"
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done

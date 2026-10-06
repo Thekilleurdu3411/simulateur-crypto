@@ -1,5 +1,6 @@
 // Écrans de l'appli : chaque fonction renvoie le HTML d'un écran.
 import { ongletEntreprise } from './views-entreprise.js';
+import { pushDisponible } from './push.js';
 import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VERSION, reglesDe } from './config.js';
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
@@ -553,6 +554,7 @@ function ongletFinances(ctx) {
           <button class="bouton secondaire petit" data-action="exporter">Exporter</button>
           <button class="bouton secondaire petit" data-action="importer">Importer</button>
           <button class="bouton secondaire petit" data-action="notifs">${notifsActives() ? 'Notifications : oui' : 'Notifications : non'}</button>
+          ${notifsActives() && pushDisponible() ? '<button class="bouton secondaire petit" data-action="push-tester">Tester une notification</button>' : ''}
           <button class="bouton danger petit" data-action="abandonner">Abandonner</button>
         </div>
       </div>

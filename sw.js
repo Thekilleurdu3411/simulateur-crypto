@@ -1,10 +1,10 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre comme une vraie appli.
 // Les données de marché ne sont jamais mises en cache : elles doivent rester réelles.
-const CACHE = 'simcrypto-v0.21.0';
+const CACHE = 'simcrypto-v0.21.1';
 const FICHIERS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/main.js', './js/config.js', './js/market.js', './js/engine.js', './js/state.js',
-  './js/views.js', './js/chart.js', './js/format.js', './js/orders.js', './js/portefeuille.js', './js/suivi.js', './js/minage.js', './js/jeuminage.js', './js/views-minage.js', './js/donnees.js', './js/altcoins.js', './js/futures.js', './js/jeufutures.js', './js/marchefutures.js', './js/views-futures.js', './js/fiscalite.js', './js/jeufisc.js', './js/views-fisc.js', './js/vie.js', './js/jeuvie.js', './js/views-vie.js', './js/views-reglages.js', './js/horloge.js', './js/notifs.js', './js/simu.js', './js/economie.js', './js/carriere.js', './js/views-carriere.js', './js/bienetre.js', './js/biens.js', './js/personnalites.js', './js/jeusocial.js', './js/views-social.js', './js/competition.js', './js/entreprise.js', './js/views-entreprise.js', './js/expansion.js',
+  './js/views.js', './js/chart.js', './js/format.js', './js/orders.js', './js/portefeuille.js', './js/suivi.js', './js/minage.js', './js/jeuminage.js', './js/views-minage.js', './js/donnees.js', './js/altcoins.js', './js/futures.js', './js/jeufutures.js', './js/marchefutures.js', './js/views-futures.js', './js/fiscalite.js', './js/jeufisc.js', './js/views-fisc.js', './js/vie.js', './js/jeuvie.js', './js/views-vie.js', './js/views-reglages.js', './js/horloge.js', './js/notifs.js', './js/simu.js', './js/economie.js', './js/carriere.js', './js/views-carriere.js', './js/bienetre.js', './js/biens.js', './js/personnalites.js', './js/jeusocial.js', './js/views-social.js', './js/competition.js', './js/entreprise.js', './js/views-entreprise.js', './js/expansion.js', './js/push.js',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

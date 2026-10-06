@@ -358,3 +358,15 @@ Tout peut être changé : il suffit de le demander.
 | Introduction en Bourse | Euronext Growth ; 2 années de comptes et une valeur d'au moins 20 M€ (actif net ou 15 fois le dernier bénéfice) ; 300 000 € de frais et 7 % des sommes levées ; 4 mois de préparation ; 25 % d'actions nouvelles, prix fixé entre −15 % et +15 % de la valeur juste | Ordres de grandeur d'une petite introduction. |
 | Cours | Suit le bitcoin (bêta 0,9), revient lentement vers la valeur juste, volatilité de 60 % par an | Valeur crypto cotée. |
 | Après la Bourse | Tes actions comptent à la valeur de marché ; vente par tranches de 1, 5 ou 10 % du capital (3 % de décote, flat tax sur la plus-value) ; les dividendes sont partagés avec les autres actionnaires | Réalisme. |
+
+## V0.21.1 — Notifications push (appli fermée)
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Quand | Seulement en mode Réalité : dans les autres modes, le temps du jeu s'arrête quand l'appli est fermée, il n'y a donc rien à signaler | Choix de Valentin (Cloudflare + Firebase). |
+| Chemin | L'appli Android s'inscrit auprès de Firebase (FCM). En passant en arrière-plan, elle confie au serveur Cloudflare la liste des prix à surveiller ; en revenant, elle la retire | Le navigateur intégré d'une appli ne reçoit pas les notifications web : FCM est obligatoire sur Android. |
+| Surveillé | Ordres limite, stop-limit et OCO (prix franchi), positions à effet de levier (80 % de la marge perdue, liquidation) | Les événements qui dépendent du prix. Les autres (salaire, livraisons…) sont rejoués à la réouverture. |
+| Serveur | Worker Cloudflare gratuit, vérification chaque minute sur les bougies d'une minute de Binance (Kraken en secours), en tenant compte du décalage d'une partie rejouée ; une seule clé KV écrite seulement quand quelque chose change | Rester dans l'offre gratuite (1 000 écritures par jour). |
+| Rôle | Le serveur prévient seulement : l'exécution réelle est calculée par le jeu à la réouverture, sur les vraies bougies | Une seule source de vérité. |
+| Déploiement | GitHub Actions : worker déployé avec les secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID et FIREBASE_SA ; son adresse est écrite dans data/push.json ; l'APK n'inclut les notifications push que si GOOGLE_SERVICES_JSON existe | Aucune clé dans le code ni dans la conversation. |
+| Test | Bouton « Tester une notification » dans Finances › Partie | Vérifier la chaîne complète. |

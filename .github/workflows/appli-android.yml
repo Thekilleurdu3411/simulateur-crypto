@@ -41,11 +41,19 @@ jobs:
 
       - name: Préparer le projet Capacitor
         working-directory: app-android
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           npm install --no-audit --no-fund
+          # Notifications push : seulement si le projet Firebase est configuré (sinon l'appli planterait)
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Secret GOOGLE_SERVICES_JSON absent : appli construite sans notifications push."
+            npm uninstall --no-audit --no-fund @capacitor/push-notifications
+          fi
           mkdir -p www
           cp -r ../index.html ../css ../js ../icons ../data ../manifest.webmanifest ../sw.js www/
           npx cap add android
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json; fi
           npx capacitor-assets generate --android --iconBackgroundColor '#221C10' --iconBackgroundColorDark '#221C10' --splashBackgroundColor '#0B0E11' --splashBackgroundColorDark '#0B0E11'
           npx cap sync android
 

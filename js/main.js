@@ -9,6 +9,7 @@ import { avancerCompetition, accepterDefi, refuserDefi, changerRival } from './c
 import * as E from './entreprise.js';
 import * as X from './expansion.js';
 import { moisDe } from './views-entreprise.js';
+import { inscrire as inscrirePush, synchroniser as synchroPush, alertesDe, tester as testerPush, pushDisponible } from './push.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche, patrimoine } from './engine.js';
@@ -782,13 +783,18 @@ const actions = {
   kyc: () => { demarrerKyc(partie); sauver(partie); rendre(); },
   'vir-sens': v => { app.virement.sens = v; rendre(); },
   virer: () => virer(),
+  'push-tester': async () => {
+    toast('Envoi d\'une notification de test…', '');
+    const r = await testerPush();
+    toast(r && r.ok ? 'Notification envoyée : elle doit arriver sur ton téléphone.' : (r && r.erreur) || 'Échec.', r && r.ok ? 'ok' : 'erreur');
+  },
   exporter: () => exporter(),
   importer: () => importer(),
   notifs: async () => {
     if (notifsActives()) { desactiverNotifs(); toast('Notifications désactivées.', ''); return rendre(); }
     const p = await activerNotifs();
     rendre();
-    if (p === 'granted') toast('Notifications activées : tu seras prévenu quand l\'appli est en arrière-plan.', 'ok');
+    if (p === 'granted') { toast('Notifications activées : tu seras prévenu quand l\'appli est en arrière-plan.', 'ok'); if (pushDisponible()) inscrirePush(); }
     else if (p === 'indisponible') toast("Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord l'appli à l'écran d'accueil.", 'erreur');
     else toast('Notifications refusées dans les réglages du téléphone.', 'erreur');
   },
@@ -856,12 +862,24 @@ M.ecouter((type, symbole, donnees) => {
   else if (type === 'liste' && app.ecran === 'jeu' && app.onglet === 'marche' && !app.crypto) rendre();
 });
 
+// Appli en arrière-plan en mode Réalité : le serveur surveille les prix et prévient par notification.
+let pushConfie = false;
+function confierAlertes() {
+  if (!partie || !notifsActives() || !pushDisponible() || accelere()) return;
+  const alertes = alertesDe(partie);
+  if (!alertes.length) return;
+  pushConfie = true;
+  synchroPush(alertes, Date.now() - tJeu());
+}
+if (notifsActives() && pushDisponible()) inscrirePush();
+
 function marquerVu() { if (partie) { partie.vuLe = tJeu(); sauver(partie); } }
 setInterval(marquerVu, 30000);
 document.addEventListener('visibilitychange', () => {
   visibilite(document.visibilityState === 'visible'); // temps accéléré : arrêté pendant l'absence
-  if (document.visibilityState === 'hidden') marquerVu();
-  else { const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(() => rattraperDerives(v)).then(marquerVu); }
+  if (document.visibilityState === 'hidden') { marquerVu(); confierAlertes(); }
+  else {
+    if (pushConfie) { pushConfie = false; synchroPush([], 0); } // l'appli reprend la main const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(() => rattraperDerives(v)).then(marquerVu); }
 });
 
 setInterval(() => {

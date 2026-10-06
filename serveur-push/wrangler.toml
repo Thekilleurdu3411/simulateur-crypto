@@ -1,0 +1,13 @@
+# Serveur de notifications de Proof of Life. Déployé par .github/workflows/serveur-push.yml
+# (l'identifiant de l'espace KV est complété automatiquement au déploiement).
+name = "proof-of-life-push"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "ABONNES"
+id = "__KV_ID__"
+
+[triggers]
+crons = ["* * * * *"]

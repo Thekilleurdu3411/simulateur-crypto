@@ -33,6 +33,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Compétition (V0.19) : ligue trimestrielle Kryptal contre les personnalités (performance du trading, divisions Bronze à Diamant, primes, montées et descentes), rival, défis avec mise (duels, paris, pronostics), 19 trophées, réactions des personnalités que tu dépasses.
 - Ton entreprise (V0.20) : Finances › Mon entreprise. Création d'une SAS, apports en compte courant, dividendes avec flat tax, fermes de minage industrielles (France, Norvège, Texas, Paraguay) avec techniciens, traders salariés (talent, risque, bonus, fraudes), comptabilité, impôt sur les sociétés, liquidation en cas de découvert prolongé.
 - L'entreprise grandit (V0.21) : augmentation de capital, fonds d'investissement ouvert aux clients (agrément AMF, stratégies, gérant, publicité, frais de gestion et de performance), plateforme d'échange (agrément MiCA, clients, sécurité, piratages), introduction en Bourse sur Euronext Growth, cours, vente d'actions, dividendes partagés.
+- Notifications push (V0.21.1) : en mode Réalité, même appli fermée, un petit serveur gratuit (Cloudflare) surveille tes ordres en attente et tes positions à effet de levier et te prévient par Firebase quand un prix est franchi.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -108,6 +109,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/competition.js` | Ligue, rival, défis et trophées (testé) |
 | `js/entreprise.js`, `js/views-entreprise.js` | Société : minage industriel, traders, comptes, impôt sur les sociétés (testé), écran |
 | `js/expansion.js` | Fonds d'investissement, plateforme d'échange, Bourse (testé) |
+| `js/push.js`, `serveur-push/` | Notifications push : inscription Firebase dans l'appli, serveur Cloudflare (worker, testé) déployé par GitHub Actions |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -115,7 +117,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. Validés, à faire : bourse du Crous, APL, rejeu jusqu'en 2017 (machines S9, S17), notifications push par serveur.
+1. Validés, à faire : bourse du Crous, APL, rejeu jusqu'en 2017 (machines S9, S17).
 
 ## Décisions
 
