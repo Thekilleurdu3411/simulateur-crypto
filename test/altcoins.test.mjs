@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { coinsParSeconde, calculerRig } from '../js/altcoins.js';
 import { avancer } from '../js/minage.js';
 
-const alt = JSON.parse(readFileSync(new URL('../data/altcoins.json', import.meta.url)));
+const alt = JSON.parse(readFileSync(new URL('./fixtures/altcoins-snapshot.json', import.meta.url)));
 
 test('Ravencoin : on retrouve l\'estimation de WhatToMine (241,24 RVN par jour pour 3 × RTX 3070)', () => {
   const parJour = coinsParSeconde(3 * 27.6e6, alt.coins.RVN, 0) * 86400;

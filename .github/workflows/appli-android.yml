@@ -1,0 +1,66 @@
+name: Appli Android
+
+# Construit l'appli Android (APK) et la publie dans la release « appli-android » du dépôt.
+# L'appli ouvre le jeu en ligne : les mises à jour du jeu arrivent sans réinstaller l'APK.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app-android/**'
+      - '.github/workflows/appli-android.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: appli-android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Préparer le projet Capacitor
+        working-directory: app-android
+        run: |
+          npm install --no-audit --no-fund
+          mkdir -p www
+          cp -r ../index.html ../css ../js ../icons ../data ../manifest.webmanifest ../sw.js www/
+          npx cap add android
+          npx capacitor-assets generate --android --iconBackgroundColor '#221C10' --iconBackgroundColorDark '#221C10' --splashBackgroundColor '#0B0E11' --splashBackgroundColorDark '#0B0E11'
+          npx cap sync android
+
+      - name: Clé de signature fixe (mises à jour sans désinstaller)
+        run: |
+          mkdir -p ~/.android
+          cp app-android/debug.keystore ~/.android/debug.keystore
+
+      - name: Compiler l'APK
+        working-directory: app-android/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publier dans les releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app-android/android/app/build/outputs/apk/debug/app-debug.apk ProofOfLife.apk
+          gh release delete appli-android --yes --cleanup-tag || true
+          gh release create appli-android ProofOfLife.apk \
+            --title "Proof of Life — appli Android" \
+            --notes "Appli Android de Proof of Life. Ouvre cette page depuis ton téléphone, télécharge ProofOfLife.apk puis installe-le (autorise l'installation depuis ton navigateur si Android le demande). L'appli charge le jeu en ligne : les nouvelles versions du jeu arrivent toutes seules."

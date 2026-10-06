@@ -1,0 +1,12 @@
+{
+  "appId": "fr.thekilleur.proofoflife",
+  "appName": "Proof of Life",
+  "webDir": "www",
+  "server": {
+    "url": "https://thekilleurdu3411.github.io/simulateur-crypto/",
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0B0E11"
+  }
+}

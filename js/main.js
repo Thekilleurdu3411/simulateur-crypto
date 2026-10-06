@@ -3,7 +3,7 @@ import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
 import { vueReglages, valeurTexte } from './views-reglages.js';
 import { reglerHorloge, enRejeu } from './horloge.js';
-import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives } from './notifs.js';
+import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
@@ -366,11 +366,22 @@ function virer() {
   toast('Virement reçu : ' + eur(v), 'ok');
 }
 
-function exporter() {
-  const blob = new Blob([JSON.stringify(partie, null, 2)], { type: 'application/json' });
+async function exporter() {
+  const json = JSON.stringify(partie, null, 2);
+  const nom = 'proof-of-life-sauvegarde.json';
+  // Appli Android : le navigateur intégré ne télécharge pas, on passe par le partage du téléphone.
+  const FS = natif('Filesystem'), Partage = natif('Share');
+  if (FS && Partage) {
+    try {
+      const r = await FS.writeFile({ path: nom, data: json, directory: 'CACHE', encoding: 'utf8' });
+      await Partage.share({ title: 'Sauvegarde Proof of Life', files: [r.uri], dialogTitle: 'Enregistrer ou envoyer la sauvegarde' });
+    } catch (e) { if (!/cancel/i.test(String(e && e.message))) toast("Impossible d'exporter la sauvegarde.", 'erreur'); }
+    return;
+  }
+  const blob = new Blob([json], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'simulateur-crypto-sauvegarde.json';
+  a.download = nom;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }

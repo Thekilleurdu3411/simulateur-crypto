@@ -1,0 +1,16 @@
+{
+  "name": "proof-of-life-android",
+  "private": true,
+  "description": "Appli Android de Proof of Life (Capacitor) : elle ouvre le jeu en ligne, avec notifications et partage natifs.",
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/share": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0"
+  }
+}

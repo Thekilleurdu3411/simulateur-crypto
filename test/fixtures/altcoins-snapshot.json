@@ -1,0 +1,13 @@
+{
+  "source": "whattomine.com (coins.json et asic.json)",
+  "maj": 1791149893000,
+  "coins": {
+    "RVN": { "nom": "Ravencoin", "algo": "KawPow", "blockTime": 60.0, "reward": 1250.0, "nethash": 617714927280, "btc": 0.000000027227443565819165 },
+    "ETC": { "nom": "Ethereum Classic", "algo": "Etchash", "blockTime": 13.5696, "reward": 1.589248, "nethash": 168093741515780, "btc": 0.00010408780579454218 },
+    "ERG": { "nom": "Ergo", "algo": "Autolykos", "blockTime": 125.0, "reward": 3.632985062, "nethash": 550273625882, "btc": 0.0000036597927390419266 },
+    "LTC": { "nom": "Litecoin", "algo": "Scrypt", "blockTime": 130.0, "reward": 6.25, "nethash": 3205710146305224, "btc": 0.0008204827099611068 },
+    "DOGE": { "nom": "Dogecoin", "algo": "Scrypt", "blockTime": 63.0, "reward": 10000.0, "nethash": 3898377288730168, "btc": 0.0000011253430987912826 },
+    "XMR": { "nom": "Monero", "algo": "RandomX", "blockTime": 115.0, "reward": 0.65588850976, "nethash": 6812447695, "btc": 0.00635600761069247 },
+    "KAS": { "nom": "Kaspa", "algo": "kHeavyHash", "blockTime": 0.1, "reward": 2.149211617, "nethash": 358132160598633800, "btc": 0.0000004932899309533675 }
+  }
+}
