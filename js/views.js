@@ -1,4 +1,5 @@
 // Écrans de l'appli : chaque fonction renvoie le HTML d'un écran.
+import { ongletEntreprise } from './views-entreprise.js';
 import { DIFFICULTES, SITUATIONS, LOGEMENTS, MODES_VIE, METIERS, INTERVALLES, VERSION, reglesDe } from './config.js';
 import { eur, eurSigne, prix, qte, pct, duree, dateHeure, echapper as e } from './format.js';
 import { patrimoine } from './engine.js';
@@ -516,7 +517,9 @@ function ongletFinances(ctx) {
       ${bloque ? `<div class="ligne-kv"><span>Bloqués dans des ordres</span><span class="num">${eur(bloque)}</span></div>` : ''}
       <div class="ligne-kv"><span>Cryptos</span>${live('actifs', ctx, 'num')}</div>`;
   }
-  return `<h1 style="font-size:24px;font-weight:800">Finances</h1>
+  const segFin = `<div class="segment sur-fond"><button data-action="sous-finances" data-v="perso" aria-pressed="${app.sousFinances !== 'entreprise'}">Moi</button><button data-action="sous-finances" data-v="entreprise" aria-pressed="${app.sousFinances === 'entreprise'}">Mon entreprise</button></div>`;
+  if (app.sousFinances === 'entreprise') return `<h1 style="font-size:24px;font-weight:800">Finances</h1>${segFin}${ongletEntreprise(ctx)}`;
+  return `<h1 style="font-size:24px;font-weight:800">Finances</h1>${segFin}
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">Compte bancaire</span><span class="badge neutre">Banque</span></div>
       <div class="ligne-kv"><span>Solde</span><span class="num" style="font-size:18px;color:var(--texte)">${eur(partie.banque.solde)}</span></div>

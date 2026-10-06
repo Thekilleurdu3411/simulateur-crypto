@@ -6,6 +6,8 @@ import { reglerHorloge, enRejeu, accelere, visibilite, changerVitesse, vitesseAc
 import { creerSimulation, prixSimu } from './simu.js';
 import { avancerSocial, repondre, resilierVip, retirerFonds, publier, valeurFonds, classement } from './jeusocial.js';
 import { avancerCompetition, accepterDefi, refuserDefi, changerRival } from './competition.js';
+import * as E from './entreprise.js';
+import { moisDe } from './views-entreprise.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche, patrimoine } from './engine.js';
@@ -469,6 +471,67 @@ const actions = {
     if (r.erreur) return toast(r.erreur, 'erreur');
     sauver(partie); rendre(); if (r.texte) toast(r.texte, '');
   },
+  'sous-finances': v => { app.sousFinances = v; rendre(); },
+  'sous-entreprise': v => { app.sousEntreprise = v; rendre(); },
+  'ent-creer': () => {
+    const nom = (document.getElementById('f-ent-nom')?.value || '').trim();
+    const capital = lireEuros('f-ent-capital') || E.CREATION.capitalMin;
+    if (!nom) return toast('Donne un nom à ta société.', 'erreur');
+    if (capital < E.CREATION.capitalMin) return toast(`Capital minimum : ${E.CREATION.capitalMin} €.`, 'erreur');
+    if (partie.banque.solde < capital) return toast('Pas assez sur ton compte bancaire.', 'erreur');
+    confirmer(`Créer ${nom} ?`, `${eur(capital)} pris sur ton compte bancaire pour le capital. Frais de création ${E.CREATION.frais} € payés par la société.`, 'Créer', () => {
+      partie.banque.solde -= capital;
+      partie.entreprise = E.nouvelleEntreprise(nom, capital, tJeu());
+      journal(partie, 'vie', `Création de la SAS ${nom} au capital de ${eur(capital)}. Kbis attendu dans ${E.CREATION.delaiJours} jours.`);
+      sauver(partie); rendre(); toast('Société créée !', 'ok');
+    });
+  },
+  'ent-apport': () => fluxEntreprise(E.apporter, m => `Apport de ${eur(m)} en compte courant d'associé.`),
+  'ent-rembourser': () => fluxEntreprise(E.rembourser, m => `Remboursement de ${eur(m)} de ton compte courant d'associé.`),
+  'ent-dividendes': () => fluxEntreprise(E.distribuer, (m, r) => `Dividendes : ${eur(m)} bruts, ${eur(r.net)} nets après flat tax.`),
+  'ent-tech': v => { const ent = partie.entreprise; const r = E.changerTechniciens(ent, Math.max(0, ent.techniciens + Number(v))); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  'ent-vendre-btc-auto': v => { partie.entreprise.vendreBTC = v === '1'; sauver(partie); rendre(); },
+  'ent-vendre-btc': () => { const r = E.vendreBitcoins(partie.entreprise, prixEUR('BTC')); if (r.erreur) return toast(r.erreur, 'erreur'); journal(partie, 'vie', `${partie.entreprise.nom} vend ses bitcoins : ${eur(r.montant)}.`); sauver(partie); rendre(); toast('Vendu : ' + eur(r.montant), 'ok'); },
+  'ent-site': v => {
+    const S = E.site(v);
+    confirmer(`Construire : ${S.nom} ?`, `Travaux ${eur(S.travaux)}, puis ${eur(S.loyer)} de loyer par mois. Prêt dans ${S.delai} jours.`, 'Construire', () => {
+      const r = E.construireSite(partie.entreprise, v, tJeu());
+      if (r.erreur) return toast(r.erreur, 'erreur');
+      journal(partie, 'vie', `${partie.entreprise.nom} lance le chantier : ${S.nom} (${eur(S.travaux)}).`);
+      sauver(partie); rendre(); toast('Chantier lancé !', 'ok');
+    });
+  },
+  'ent-acheter': () => {
+    const siteId = document.getElementById('f-ent-site')?.value, mod = document.getElementById('f-ent-modele')?.value;
+    const n = Math.floor(lireEuros('f-ent-n'));
+    const r = E.acheterMachines(partie.entreprise, siteId, mod, n, D.etat.eurUsd, tJeu());
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    journal(partie, 'machine', `${partie.entreprise.nom} commande ${n} machines (${eur(r.prix.total)} HT).`);
+    sauver(partie); rendre(); toast(`Commande passée : ${eur(r.prix.total)}`, 'ok');
+  },
+  'ent-vendre-lot': v => { const [sid, i] = v.split('|'); const r = E.vendreLot(partie.entreprise, sid, Number(i), D.etat.eurUsd, tJeu()); if (r.erreur) return toast(r.erreur, 'erreur'); journal(partie, 'machine', `${partie.entreprise.nom} revend un lot de machines : ${eur(r.montant)}.`); sauver(partie); rendre(); },
+  'ent-embaucher': v => {
+    const ent = partie.entreprise;
+    const c = E.candidats(((partie.creeLe || 0) / 1000) | 0, moisDe(tJeu())).find(x => x.id === v);
+    if (!c) return;
+    const r = E.embaucher(ent, c, Math.max(0, lireEuros('f-ent-alloc') || 0), tJeu());
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    journal(partie, 'vie', `${ent.nom} embauche ${c.nom}, trader ${E.PROFILS_TRADER[c.type].nom.toLowerCase()} (${c.salaire.toLocaleString('fr-FR')} € brut par an).`);
+    sauver(partie); rendre(); toast(`${c.nom} rejoint l'équipe.`, 'ok');
+  },
+  'ent-allouer': v => {
+    const [i, sens] = v.split('|').map(Number); const m = lireEuros('f-ent-alloc');
+    if (!(m > 0)) return toast('Indique un montant.', 'erreur');
+    const r = E.allouer(partie.entreprise, i, m * sens);
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    if (r.scandale) { journal(partie, 'vie', r.scandale); toast(r.scandale, 'erreur'); } else toast(sens > 0 ? 'Capital confié.' : 'Capital repris.', 'ok');
+    sauver(partie); rendre();
+  },
+  'ent-licencier': v => confirmer('Licencier ce trader ?', 'Environ deux mois de salaire chargé d\'indemnités ; son capital revient à la trésorerie.', 'Licencier', () => {
+    const r = E.licencier(partie.entreprise, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur');
+    if (r.trou) { const txt = `En reprenant son portefeuille, tu découvres ${eur(r.trou)} de pertes cachées.`; journal(partie, 'vie', txt); toast(txt, 'erreur'); }
+    sauver(partie); rendre();
+  }),
   'sous-compet': v => { app.sousCompet = v; rendre(); },
   'defi-choix': v => { app.defiChoix = v; rendre(); },
   'defi-accepter': v => {
@@ -782,14 +845,34 @@ setInterval(() => {
 
 if (partie) verifierKyc(partie) && sauver(partie);
 
+function lireEuros(id) { const v = document.getElementById(id)?.value || ''; return Number(v.replace(/[\s\u202f]/g, '').replace(',', '.')) || 0; }
+function fluxEntreprise(f, texte) {
+  const m = lireEuros('f-ent-flux');
+  const r = f(partie, m);
+  if (r.erreur) return toast(r.erreur, 'erreur');
+  journal(partie, 'vie', texte(m, r)); sauver(partie); rendre(); toast(texte(m, r), 'ok');
+}
+
 function patrimoineTotal() {
   if (!partie) return null;
-  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, prixEUR)).total; } catch (e) { return null; }
+  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, prixEUR) + (partie.entreprise ? E.valeurEntreprise(partie.entreprise, prixEUR('BTC'), D.etat.eurUsd, tJeu()) : 0)).total; } catch (e) { return null; }
 }
 
 // Réseau social : publications des personnalités, messages, pronostics (une fois par jour de jeu).
+// Ta société : production des fermes, salaires, traders, clôture des comptes.
+function avancerEntrepriseJeu() {
+  const ent = partie && partie.entreprise;
+  if (!ent || ent.liquidee) return;
+  const evts = E.avancerEntreprise(ent, tJeu(), { prixBTC: prixEUR('BTC'), eurUsd: D.etat.eurUsd, reseau: D.etat.reseau }, ((partie.creeLe || 0) / 1000) | 0);
+  if (ent.liquidee && !ent.liquidee.verse) { partie.banque.solde += ent.liquidee.rendu; ent.liquidee.verse = true; }
+  if (!evts.length) return;
+  for (const x of evts) journal(partie, 'vie', x);
+  sauver(partie); toast(evts[evts.length - 1], ''); if (app.ecran === 'jeu' && app.onglet === 'finances') rendre();
+}
+
 function avancerSocialJeu() {
   if (!partie) return;
+  avancerEntrepriseJeu();
   const t = tJeu(), tk = M.ticker('BTCEUR');
   const sim = partie.simulation;
   const actifs = Object.entries(partie.plateforme.actifs).reduce((a, [b, x]) => a + x.qte * (prixEUR(b) || 0), 0);
@@ -805,7 +888,7 @@ function avancerSocialJeu() {
     try {
       evts.push(...avancerCompetition(partie, t, {
         prix: prixEUR, liste: classement(partie, prixEUR, pt), patrimoine: pt,
-        machines: partie.minage ? partie.minage.machines.length : 0
+        machines: partie.minage ? partie.minage.machines.length : 0, entreprise: partie.entreprise
       }));
     } catch (e) { console.warn('compétition', e); }
   }

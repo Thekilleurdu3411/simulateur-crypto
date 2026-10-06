@@ -324,3 +324,23 @@ Tout peut être changé : il suffit de le demander.
 | Défis | Environ un tous les 12 jours, à accepter sous 3 jours avec une mise de 50, 250, 1 000 ou 5 000 € prise sur le compte bancaire : duel de trading sur 14 jours ou un mois (le gagnant prend la mise), pari +10 % en un mois (cote 4), pari +20 % d'abonnés (cote 2), pronostic du bitcoin à 7 jours (hausse, stable, baisse ; si les deux ont raison ou tort, mise rendue) ; l'adversaire voit juste selon sa fiabilité quand l'avenir est simulé | Enjeu réel sans casino. |
 | Trophées | 19 trophées (premiers 100 000 €, millionnaire, 1 BTC, top 10, numéro un, divisions, champion, rival battu 3 fois, 5 défis, 10 pronostics justes, abonnés, 10 machines, propriétaire, réputation 90) ; chacun donne 1 point de réputation | Objectifs à long terme. |
 | Dépassements | Une personnalité que tu dépasses au classement des fortunes réagit sur le fil (une seule fois par partie) ; le champion de la ligue est félicité par Kryptal | Monde vivant. |
+
+## V0.20 — Ta société crypto
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Place | Onglet Finances, bouton « Mon entreprise » | Six onglets au maximum. |
+| Création | SAS, 250 € de frais (greffe, annonce légale) payés par la société, capital d'au moins 1 000 € pris sur ton compte, Kbis en 7 jours ; responsabilité limitée aux apports | Démarches réelles simplifiées. |
+| Toi et ta société | Apport en compte courant d'associé (remboursable sans impôt) ; dividendes seulement sur les bénéfices des années clôturées, flat tax de 31,4 % (12,8 % + 18,6 % de prélèvements sociaux en 2026) ; pas encore de salaire de président | Règles françaises ; taux **à vérifier**. |
+| Comptes | Exercice civil ; produits : bitcoins minés, trading, plus-values ; charges : électricité, loyers, salaires chargés, comptable, banque, assurance (180 + 40 + 120 € par mois, plus 35 € par salarié), amortissements (machines 3 ans, sites 10 ans), agios | Ordres de grandeur **à vérifier**. |
+| Impôt sur les sociétés | 15 % jusqu'à 42 500 € de bénéfice, 25 % au-delà, payé à la clôture ; déficits reportés (1 M€ plus 50 % au-delà par an) ; 5 % du bénéfice en réserve légale jusqu'à 10 % du capital | Règles 2026. |
+| Sites de minage | Entrepôt en France 500 kW (90 000 € de travaux, 4 500 €/mois, 0,115 €/kWh, 45 jours), hangar en Norvège 2 MW (380 000 €, 14 000 €/mois, 0,055 €/kWh, 90 jours), ferme au Texas 10 MW (1,6 M€, 45 000 €/mois, 0,045 $/kWh, 120 jours), ferme hydro au Paraguay 20 MW (2,9 M€, 70 000 €/mois, 0,038 $/kWh, 150 jours) ; 8 % de consommation en plus pour le refroidissement | Prix industriels **à vérifier**. |
+| Machines | ASIC bitcoin du catalogue, hors taxes, 300 € de transport par lot, remise de 5 % dès 100 et 10 % dès 500, livraison 3 semaines après l'ouverture du site ; revente à 70 % du prix, moins 20 % par an d'âge, moins 10 % de frais | Marché de gros. |
+| Techniciens | Un pour 250 machines, 4 100 € par mois chacun (coût employeur), 1 500 € de recrutement ; 97 % des machines tournent avec assez de techniciens, jusqu'à 72 % sans | Réalisme. |
+| BTC minés | Vendus au fil de l'eau (0,1 % de frais) ou gardés par la société | Choix de stratégie. |
+| Traders | Trois candidats par mois (junior 42 à 55 k€, confirmé 75 à 110 k€, star 180 à 300 k€ brut par an), 45 % de charges, 20 % du salaire au cabinet de recrutement, bonus de 10 à 20 % des gains de l'année ; tu vois une note d'entretien bruitée, des références et un style de risque ; leur rendement : bêta au bitcoin selon le risque, talent (la plupart ne battent pas le marché) et hasard | Réalité des salles de marché. |
+| Fraude | 15 % des candidats sont douteux (références souvent floues) ; un fraudeur affiche des gains pendant qu'il perd ; le trou apparaît s'il dépasse 30 %, par hasard, ou quand tu reprends l'argent | Affaires de traders véreux. |
+| Découvert | Agios de 9 % par an ; après 60 jours de trésorerie négative, liquidation judiciaire : tout est vendu à la casse, tu récupères ce qui reste | Risque réel d'entreprendre. |
+| Patrimoine | La valeur de la société (trésorerie, bitcoins, machines et sites à leur valeur comptable, capital des traders) compte dans ton patrimoine et le classement | Cohérence. |
+| Trophées | Entrepreneur, Industriel, Salle de marché | Compétition. |
+| Suite (V0.21) | Fonds d'investissement ouvert aux clients, plateforme d'échange, introduction en Bourse | Découpage pour livrer plus tôt. |

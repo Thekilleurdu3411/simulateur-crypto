@@ -108,7 +108,10 @@ export const TROPHEES = [
   ['star', 'Star des réseaux', '100 000 abonnés', c => c.abonnes >= 1e5],
   ['mineur', 'Petite ferme', '10 machines de minage', c => c.machines >= 10],
   ['proprio', 'Propriétaire', 'Acheter ton logement', c => c.proprietaire],
-  ['integre', 'Intègre', 'Réputation de 90 sur 100', c => c.reputation >= 90]
+  ['integre', 'Intègre', 'Réputation de 90 sur 100', c => c.reputation >= 90],
+  ['societe', 'Entrepreneur', 'Créer ta société', c => c.societe],
+  ['ferme', 'Industriel', 'Mettre en service une ferme de minage', c => c.ferme],
+  ['salle', 'Salle de marché', 'Diriger 5 traders', c => c.traders >= 5]
 ];
 
 // ---------- État ----------
@@ -248,7 +251,8 @@ export function avancerCompetition(partie, t, ctx, R = Math.random) {
   const etat = {
     cryptos: Object.keys(partie.plateforme.actifs || {}).length, btc: partie.plateforme.actifs?.BTC?.qte || 0, patrimoine: ctx.patrimoine || 0,
     rang, division: c.division, titres: c.titres, rivalV: c.rivalV, defisGagnes: c.defisGagnes,
-    justes: s.justes || 0, abonnes: s.abonnes, machines: ctx.machines || 0, proprietaire: !!partie.profil.proprietaire, reputation: s.reputation
+    justes: s.justes || 0, abonnes: s.abonnes, machines: ctx.machines || 0, proprietaire: !!partie.profil.proprietaire, reputation: s.reputation,
+    societe: !!ctx.entreprise && !ctx.entreprise.liquidee, ferme: !!ctx.entreprise && ctx.entreprise.sites.some(x => x.ouvert), traders: ctx.entreprise ? ctx.entreprise.traders.length : 0
   };
   for (const [id, nom, , test] of TROPHEES) {
     if (c.trophees[id] || !test(etat)) continue;
