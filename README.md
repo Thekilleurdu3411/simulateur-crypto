@@ -66,6 +66,8 @@ N'importe quel hébergement de fichiers statiques en HTTPS convient :
 
 Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
+**Appli Android** : télécharger `ProofOfLife.apk` depuis la release « appli-android » du dépôt et l'installer (autoriser l'installation depuis le navigateur si Android le demande).
+
 ## Structure
 
 | Fichier | Rôle |

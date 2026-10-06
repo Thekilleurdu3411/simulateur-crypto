@@ -228,3 +228,14 @@ Tout peut être changé : il suffit de le demander.
 | Impôt des très hauts revenus | Barème jusqu'à 45 % ; la contribution exceptionnelle sur les hauts revenus (3 à 4 %) n'est pas encore simulée | À ajouter avec les prochaines étapes de la vie. |
 | Capital de départ | Montant libre, sans limite, saisi au clavier (espaces et virgule acceptés), raccourcis de 1 000 € à 10 M€ | Demande de Valentin. |
 | À venir (demande de Valentin) | Événements propres à chaque métier pendant la partie, formations pour changer de métier ou progresser | Prochaine grosse étape de la vie quotidienne. |
+
+## Appli Android
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Type d'appli | Vraie appli Android (APK, Capacitor) installée hors du Play Store, pour Valentin seulement | Choix de Valentin : Android, « juste pour moi », sans frais. |
+| Contenu | L'appli ouvre le jeu en ligne (GitHub Pages) : chaque nouvelle version du jeu arrive sans réinstaller l'APK | Une seule version à maintenir ; l'APK ne change que si l'appli elle-même change. |
+| Construction | GitHub Actions construit l'APK à chaque changement du dossier `app-android` et le publie dans la release « appli-android » du dépôt | Aucun outil Android à installer chez toi. |
+| Signature | Clé de débogage fixe enregistrée dans le dépôt, pour que les mises à jour de l'APK s'installent par-dessus sans désinstaller | Appli personnelle ; pour le Play Store, il faudrait une vraie clé privée gardée secrète. |
+| Natif | Notifications Android natives, export de la sauvegarde par le partage du téléphone | Le navigateur intégré d'une appli ne gère ni les notifications web ni les téléchargements. |
+| iPhone | Pas d'appli : il faudrait un compte développeur Apple (99 $ par an) et un Mac | Valentin est sur Android. |
