@@ -297,3 +297,18 @@ Tout peut être changé : il suffit de le demander.
 | Déménagement | Nouvelle ville et type de logement, frais de déménagement (600 à 1 200 €) et un mois de loyer d'agence ; impossible en étant propriétaire sans vendre | Réalisme. |
 | Voiture | Occasion 9 000 € ou neuve 27 000 €, au comptant ou à crédit (6 %, 4 ans, 10 % d'apport) ; décote 20 % la première année puis 10 à 15 % par an ; les parties existantes en voiture en ont une d'occasion | Prix moyens 2026 **à vérifier**. |
 | Patrimoine | Logement et voiture (crédits déduits) comptent dans le patrimoine total | Réalisme. |
+
+## V0.18 — Réseau social et personnalités
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Personnalités | 20 personnalités **fictives** (aucune personne réelle) : mineurs, traders, influenceurs, analystes, fondateurs, arnaqueurs ; chacune a une exposition au marché, une fiabilité, un nombre d'abonnés et une humeur | Choix de Valentin : personnalités fictives. |
+| Fortunes | La fortune de chaque personnalité suit le marché selon son exposition (bêta au bitcoin) avec une part de hasard propre à la partie | Classement crédible et vivant. |
+| Fil d'actualité | Publications chaque jour, qui réagissent aux variations du bitcoin et aux actualités (réelles ou simulées) ; rattrapage limité aux 30 derniers jours | Réalisme et légèreté. |
+| Messages | Messages privés (environ un jour sur quatre) avec choix de réponses : groupe VIP à 299 € par mois (sans effet), faux airdrop (vol de 60 % des avoirs si tu donnes ta phrase secrète), vente OTC de Viktor (arnaque : 45 % perdus), tuyaux, pump organisé (amende de 40 % du gain si l'AMF s'en mêle), rachat de machines, collaboration, fonds de Clara, pari de Zoé, interview, conseil or | Choix de Valentin : réponses à choix. Montants **à ajuster**. |
+| Sécurité | Activer la double authentification protège du piratage du compte (0,04 % de risque par jour sans elle) | Bonne pratique réelle. |
+| Tuyaux | Uniquement dans le futur simulé (le jeu ne connaît pas l'avenir réel) ; justes selon la fiabilité de la personnalité | Pas de triche sur l'historique réel. |
+| Fonds de Clara | Investi à 50 % bitcoin, 25 % ether, 25 % or simulé, moins 2 % de frais par an ; retrait possible à tout moment | Réalisme d'un fonds géré. |
+| Abonnés et réputation | Tes publications (avis, gains, conseils, mèmes, 3 par jour au maximum) et tes prédictions à 7 jours font gagner ou perdre abonnés et réputation ; une prédiction juste rapporte, une fausse coûte | Préparer la compétition (V0.19). |
+| Classement | Patrimoine du joueur comparé aux fortunes des personnalités | Choix de Valentin : compétition contre les personnalités. |
+| Installations | Le menu des installations passe dans l'onglet Minage (sous-onglet « Sites ») pour laisser la place à l'onglet Social | Six onglets au maximum sur téléphone. |

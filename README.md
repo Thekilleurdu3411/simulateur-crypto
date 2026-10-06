@@ -1,4 +1,4 @@
-# Proof of Life — V0.17
+# Proof of Life — V0.18
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -29,6 +29,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Temps accéléré et futur simulé (V0.15) : sauf en Réalité, la vitesse du temps se règle en jeu (jusqu'à 1 minute = 1 semaine) ; l'historique réel défile vite, puis au-delà d'aujourd'hui le marché, l'actualité, le réseau Bitcoin, les nouvelles machines, l'inflation et le prix de l'électricité sont simulés.
 - Métier et carrière (V0.16) : onglet Vie, diplômes exigés par métier, 37 formations (temps plein, cours du soir, alternance, CPF), progression débutant → confirmé → expérimenté, entretien annuel, demande d'augmentation, heures sup, événements du métier chaque mois, licenciement avec indemnité et chômage.
 - Vie et activités (V0.17) : jauges de santé, énergie, moral et stress avec conséquences (burn-out, maladie, erreurs de trading), 17 activités et vacances avec congés payés, achat de logement à crédit, déménagement, voiture.
+- Réseau social et personnalités (V0.18) : onglet Social avec 20 personnalités fictives de la crypto (fil d'actualité qui réagit au marché, messages privés avec choix de réponses, arnaques, tuyaux, propositions d'affaires), abonnés et réputation, publications et prédictions, classement des fortunes.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -99,6 +100,8 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/simu.js` | Marché simulé au-delà d'aujourd'hui (testé) |
 | `js/economie.js` | Inflation et prix de l'électricité dans le temps (testé) |
 | `js/carriere.js`, `js/views-carriere.js` | Diplômes, formations, progression et événements du métier (testé), onglet Vie |
+| `js/bienetre.js`, `js/biens.js` | Jauges de vie, activités, crédit immobilier et voiture (testés) |
+| `js/personnalites.js`, `js/jeusocial.js`, `js/views-social.js` | Personnalités fictives, publications, messages et classement (testé), onglet Social |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |
@@ -106,9 +109,9 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 
 ## Prochaines versions
 
-1. Mise en ligne sur GitHub Pages (en attente de ton dépôt).
-2. Mode rejeu accéléré, perpétuels et autres cryptos en rejeu, machines plus anciennes (S9, S17).
-3. APL, Kaspa et Monero, notifications push (serveur) et synchro automatique, si tu les valides.
+1. V0.19 : compétition contre les personnalités (défis, rivalités, trophées).
+2. V0.20 : entreprise crypto (société, hangars de minage, traders salariés, fonds, plateforme d'échange).
+3. Validés, à faire : bourse du Crous, APL, rejeu jusqu'en 2017 (machines S9, S17), notifications push par serveur.
 
 ## Décisions
 

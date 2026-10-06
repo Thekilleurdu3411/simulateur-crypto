@@ -50,11 +50,12 @@ export function ongletMinage(ctx, live) {
   const sous = app.sousMinage || 'parc';
   return `<h1 style="font-size:24px;font-weight:800">Minage</h1>
     <div class="segment sur-fond">
-      <button data-action="sous-minage" data-v="parc" aria-pressed="${sous === 'parc'}">Mon parc</button>
+      <button data-action="sous-minage" data-v="parc" aria-pressed="${sous === 'parc'}">Parc</button>
       <button data-action="sous-minage" data-v="boutique" aria-pressed="${sous === 'boutique'}">Boutique</button>
+      <button data-action="sous-minage" data-v="sites" aria-pressed="${sous === 'sites'}">Sites</button>
       <button data-action="sous-minage" data-v="reseau" aria-pressed="${sous === 'reseau'}">Réseau</button>
     </div>
-    ${sous === 'parc' ? parc(ctx, mn, live) : sous === 'boutique' ? boutique(ctx, mn) : reseau(ctx, mn)}`;
+    ${sous === 'parc' ? parc(ctx, mn, live) : sous === 'boutique' ? boutique(ctx, mn) : sous === 'sites' ? ongletInstallations(ctx, live, true) : reseau(ctx, mn)}`;
 }
 
 function parc(ctx, mn, live) {
@@ -234,14 +235,14 @@ function choixHebergeur(m, ctx) {
   </div>`;
 }
 
-export function ongletInstallations(ctx, live) {
+export function ongletInstallations(ctx, live, integre = false) {
   const { partie, D } = ctx;
   const mn = minageDe(partie);
   const eurUsd = D.etat.eurUsd;
   const parents = partie.profil.logement === 'parents';
   const tab = ABONNEMENTS[mn.contrat.type] || ABONNEMENTS.base;
   const LOG = { parents: 'Chez tes parents', appart: 'Appartement en location', maison: 'Maison avec garage' };
-  return `<h1 style="font-size:24px;font-weight:800">Installations</h1>
+  return `${integre ? '' : '<h1 style="font-size:24px;font-weight:800">Installations</h1>'}
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(LOG[partie.profil.logement])}</span><span class="badge neutre">${mn.contrat.kva} kVA · ${mn.contrat.type === 'tempo' ? 'Tempo' : 'Base'}</span></div>
       <div class="ligne-kv" style="font-size:13px"><span>Puissance pour les machines</span><span class="num">${puissanceDispo(partie.profil.logement, mn.contrat.kva)} kW</span></div>

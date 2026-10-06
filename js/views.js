@@ -10,7 +10,9 @@ import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
 import { apercuProfil } from './views-vie.js';
 import { ongletVie } from './views-carriere.js';
+import { ongletSocial, nonLus } from './views-social.js';
 import { valeurBiens } from './jeuvie.js';
+import { valeurFonds } from './jeusocial.js';
 import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES, TRANSPORTS } from './vie.js';
@@ -23,6 +25,7 @@ const ICONES = {
   minage: '<path d="M5 5h14v14H5z"/><path d="M9 9h6v6H9z"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
   installations: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
   vie: '<circle cx="12" cy="7" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>',
+  social: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/>',
   finances: '<path d="M3 7h18v12H3z"/><path d="M3 7l2-3h14l2 3"/><path d="M16 13h2"/>',
   retour: '<path d="M15 6l-6 6 6 6"/>',
   suivant: '<path d="M9 6l6 6-6 6"/>'
@@ -68,7 +71,7 @@ export function valeurLive(cle, ctx) {
     case 'factureHeb': { const mn = partie.minage; return { t: mn ? eur(mn.factureHebEUR || 0) + ' · ' + Math.round(mn.factureHebKWh || 0).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
-  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd), valeurDerivesEUR(partie, ctx.F?.etat.marques || {}, ctx.D?.etat.eurUsd), valeurBiens(partie));
+  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd), valeurDerivesEUR(partie, ctx.F?.etat.marques || {}, ctx.D?.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, M.prixDeBase));
   switch (k) {
     case 'patrimoine': return { t: eur(P.total) };
     case 'perf': { const d = P.total - partie.capitalDepart; return { t: eurSigne(d) + ' (' + pct(d / partie.capitalDepart) + ')', cls: d >= 0 ? 'hausse' : 'baisse' }; }
@@ -279,13 +282,13 @@ export function vueNouvellePartie(ctx) {
 // ---------- Jeu ----------
 
 const NOMS_ALT = { RVN: 'Ravencoin', ETC: 'Ethereum Classic', ERG: 'Ergo', XMR: 'Monero', KAS: 'Kaspa' };
-const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Minage'], ['installations', 'Installations'], ['vie', 'Vie'], ['finances', 'Finances']];
+const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Minage'], ['social', 'Social'], ['vie', 'Vie'], ['finances', 'Finances']];
 
 export function vueJeu(ctx) {
   const { app, partie } = ctx;
   const d = reglesDe(partie);
   const corps = {
-    accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances, vie: ongletVie,
+    accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances, vie: ongletVie, social: ongletSocial,
     minage: c => ongletMinage(c, live),
     installations: c => ongletInstallations(c, live)
   }[app.onglet](ctx);
@@ -297,7 +300,7 @@ export function vueJeu(ctx) {
     ${accelere() ? barreVitesse() : ''}
     <main class="contenu">${corps}</main>
     <nav class="nav" aria-label="Navigation principale">
-      ${ONGLETS.map(([id, nom]) => `<button data-action="onglet" data-v="${id}" ${app.onglet === id ? 'aria-current="page"' : ''}>${icone(id)}${nom}</button>`).join('')}
+      ${ONGLETS.map(([id, nom]) => `<button data-action="onglet" data-v="${id}" ${app.onglet === id ? 'aria-current="page"' : ''} style="position:relative">${icone(id)}${nom}${id === 'social' && nonLus(partie) ? `<span style="position:absolute;top:4px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;background:var(--baisse);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center">${nonLus(partie)}</span>` : ''}</button>`).join('')}
     </nav>`;
 }
 
@@ -335,7 +338,7 @@ function ongletAccueil(ctx) {
         <div><span class="l">Plateforme</span>${live('plat', ctx, 'v')}</div>
         <div><span class="l">Cryptos</span>${live('actifs', ctx, 'v')}</div>
         <div><span class="l">Machines (revente)</span>${live('machines', ctx, 'v')}</div>
-        ${partie.profil.proprietaire || partie.profil.voiture ? `<div><span class="l">Logement et voiture</span>${live('biens', ctx, 'v')}</div>` : ''}
+        ${partie.profil.proprietaire || partie.profil.voiture || partie.social?.fonds ? `<div><span class="l">Logement, voiture, fonds</span>${live('biens', ctx, 'v')}</div>` : ''}
       </div>
     </section>
     ${guide ? `<section class="carte"><div class="carte-titre">Pour bien démarrer</div>

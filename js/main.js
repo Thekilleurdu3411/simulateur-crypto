@@ -3,7 +3,8 @@ import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
 import { vueReglages, valeurTexte } from './views-reglages.js';
 import { reglerHorloge, enRejeu, accelere, visibilite, changerVitesse, vitesseActuelle } from './horloge.js';
-import { creerSimulation } from './simu.js';
+import { creerSimulation, prixSimu } from './simu.js';
+import { avancerSocial, repondre, resilierVip, retirerFonds, publier, valeurFonds } from './jeusocial.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche, patrimoine } from './engine.js';
@@ -82,7 +83,7 @@ definirEvaluateur(p => {
 function ctx() {
   const cj = jourTempo(tJeu()), cd = jourTempo(tJeu() + 864e5);
   const cache = partie?.minage?.couleurs || {};
-  return { app, partie, M: marche, D, F, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
+  return { app, partie, M: marche, D, F, patrimoineTotal, couleurAujourdhui: D.etat.couleurs[cj] || cache[cj], couleurDemain: D.etat.couleurs[cd] || cache[cd] };
 }
 function difficulte() { return reglesDe(partie); }
 
@@ -460,6 +461,25 @@ const actions = {
   demenager: () => { const d = app.demenagement || { ville: partie.profil.ville, logement: partie.profil.logement }; const r = demenager(partie, (d.ville || '').trim(), d.logement || partie.profil.logement); if (r.erreur) return toast(r.erreur, 'erreur'); app.demenagement = null; sauver(partie); preparerMeteo(); rendre(); toast('Déménagement fait !', 'ok'); },
   'acheter-voiture': v => { const [id, mode] = v.split(':'); const r = acheterVoiture(partie, id, mode === 'credit'); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Voiture achetée !', 'ok'); },
   'vendre-voiture': () => confirmer('Vendre ta voiture ?', 'Tu passeras aux transports en commun.', 'Vendre', () => { vendreVoiture(partie); sauver(partie); rendre(); }),
+  'sous-social': v => { app.sousSocial = v; if (v === 'messages' && partie.social) { rendre(); for (const m of partie.social.messages) m.lu = true; sauver(partie); return; } rendre(); },
+  repondre: v => {
+    const [id, rep] = v.split('|');
+    const r = repondre(partie, id, rep, { prix: prixEUR, eurUsd: D.etat.eurUsd, patrimoine: patrimoineTotal() });
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    sauver(partie); rendre(); if (r.texte) toast(r.texte, '');
+  },
+  'vip-resilier': () => { resilierVip(partie); sauver(partie); rendre(); },
+  'fonds-retirer': () => { const r = retirerFonds(partie, prixEUR); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Part récupérée : ' + eur(r.montant), 'ok'); },
+  'pub-type': v => { app.publication = { ...(app.publication || { base: 'BTC', sens: 'hausse' }), type: v }; rendre(); },
+  'pub-base': v => { app.publication = { ...(app.publication || { type: 'avis', sens: 'hausse' }), base: v }; rendre(); },
+  'pub-sens': v => { app.publication = { ...(app.publication || { type: 'avis', base: 'BTC' }), sens: v }; rendre(); },
+  publier: () => {
+    const pub = app.publication || { type: 'avis', base: 'BTC', sens: 'hausse' };
+    const pt = patrimoineTotal();
+    const r = publier(partie, pub.type, { base: pub.base, sens: pub.sens, perf: pt != null ? pt / partie.capitalDepart - 1 : 0 }, { prix: prixEUR });
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    app.sousSocial = 'fil'; sauver(partie); rendre(); toast(`Publié : +${r.gain} abonnés`, 'ok');
+  },
   'heures-sup': v => { const r = changerHeuresSup(partie, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
   augmentation: () => { const r = demanderAugmentation(partie); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast(r.ok ? `Augmentation obtenue : +${String(r.pct).replace('.', ',')} % !` : "Refusée : « pas cette année ». Retente dans un an.", r.ok ? 'ok' : ''); },
   'formation-ouvrir': v => { app.formationOuverte = app.formationOuverte === v ? null : v; app.formationChoix = null; rendre(); },
@@ -751,7 +771,22 @@ if (partie) verifierKyc(partie) && sauver(partie);
 
 function patrimoineTotal() {
   if (!partie) return null;
-  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie)).total; } catch (e) { return null; }
+  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, prixEUR)).total; } catch (e) { return null; }
+}
+
+// Réseau social : publications des personnalités, messages, pronostics (une fois par jour de jeu).
+function avancerSocialJeu() {
+  if (!partie) return;
+  const t = tJeu(), tk = M.ticker('BTCEUR');
+  const sim = partie.simulation;
+  const actifs = Object.entries(partie.plateforme.actifs).reduce((a, [b, x]) => a + x.qte * (prixEUR(b) || 0), 0);
+  const evts = avancerSocial(partie, t, {
+    prix: prixEUR, variation: tk && tk.o ? tk.c / tk.o - 1 : 0, actus: M.actualites(t - 864e5, t),
+    enSimulation: M.enSimulation(t), prixFutur: sim ? x => prixSimu(sim, 'BTCEUR', x) : null,
+    patrimoine: patrimoineTotal(), cryptos: actifs, plateforme: actifs + partie.plateforme.soldeEUR,
+    machines: partie.minage ? partie.minage.machines.length : 0
+  });
+  if (evts.length) { sauver(partie); toast(evts[evts.length - 1], ''); if (app.ecran === 'jeu') rendre(); }
 }
 
 // Simulation du marché au-delà d'aujourd'hui (temps accéléré) : enregistrée dans la partie.
@@ -791,6 +826,7 @@ setInterval(() => {
   avancerVieJeu(null);
   verifierImpots();
   verifierActualites();
+  avancerSocialJeu();
   if (partie.futures && partie.futures.positions.length) F.demarrer();
   const evts = avancerMinage();
   if (evts.length) { sauver(partie); toast(evts[evts.length - 1], 'ok'); if (app.ecran === 'jeu') rendre(); }
@@ -838,6 +874,8 @@ function avancerVieJeu(depuis) {
 }
 setTimeout(() => avancerVieJeu(vuAuDemarrage), 2500);
 setInterval(() => avancerVieJeu(null), 30000);
+setInterval(() => { if (!accelere()) avancerSocialJeu(); }, 60000);
+setTimeout(avancerSocialJeu, 4000);
 
 function verifierImpots() {
   if (!partie) return;
