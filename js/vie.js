@@ -241,6 +241,8 @@ export const FORFAIT_LOGEMENT = 0.12;
 
 /** Prestations mensuelles du profil : [{ nom, montant }]. */
 export function prestations(profil) {
+  // Licencié : allocation chômage (ARE) à la place du RSA
+  if (profil.situation === 'sans' && profil.are) return [{ nom: 'Allocation chômage (ARE)', montant: Math.round(profil.are.montant * 100) / 100, organisme: 'France Travail' }];
   const age = Number(profil.age) || 25;
   const r = salaireNet(profil);
   const logementGratuit = profil.logement === 'parents';
@@ -274,9 +276,11 @@ export function trouverMetier(nom) {
 export function salaireNet(profil) {
   if (profil.situation === 'salarie') {
     const m = trouverMetier(profil.metier);
-    if (!m) return SMIC.net;
+    // Augmentations obtenues et heures supplémentaires (payées 25 % de plus)
+    const bonus = (profil.majoration || 1) * (1 + (profil.heuresSup || 0) * 1.25 / 35);
+    if (!m) return SMIC.net * bonus;
     const [a, b] = m[1 + Math.max(0, EXPERIENCES.findIndex(x => x[0] === (profil.experience || 'debutant')))];
-    return (a + b) / 2;
+    return (a + b) / 2 * bonus;
   }
   if (profil.situation === 'alternant') {
     const age = Number(profil.age) || 20;
@@ -285,7 +289,7 @@ export function salaireNet(profil) {
     const seuil = SMIC.brut * APPRENTI_EXONERATION;
     return brut <= seuil ? brut : brut - (brut - seuil) * COTISATIONS_SALARIALES;
   }
-  if (profil.situation === 'etudiant') return SMIC.net * HEURES_JOB_ETUDIANT / 35; // job étudiant payé au SMIC
+  if (profil.situation === 'etudiant') return profil.remuneration ?? SMIC.net * HEURES_JOB_ETUDIANT / 35; // formation payée, sinon job étudiant au SMIC
   return 0; // sans emploi : aucun revenu
 }
 
@@ -336,9 +340,15 @@ export function avancerVie(vie, banque, profil, t0, t1, periode, kva, options = 
     }
     // Montants de 2026 ramenés à l'année de l'échéance (inflation, revalorisations du 1er janvier)
     const k = options.indice ? options.indice(e) : 1;
+    // Carrière : formations, progression, événements du métier (primes, arrêts, licenciement…)
+    if (options.mois) {
+      const r = options.mois(e) || {};
+      for (const x of r.evts || []) evts.push({ t: e, texte: x });
+      if (r.ajustement) { const m = Math.round(r.ajustement * k * 100) / 100; banque.solde += m; }
+    }
     const s = Math.round(salaireNet(profil) * k * 100) / 100;
     if (s > 0) { banque.solde += s; evts.push({ t: e, texte: `Salaire reçu : ${s.toFixed(2).replace('.', ',')} €` }); }
-    for (const p of prestations(profil)) { const m = Math.round(p.montant * k * 100) / 100; banque.solde += m; evts.push({ t: e, texte: `${p.nom} versé(e) par la CAF : ${m.toFixed(2).replace('.', ',')} €` }); }
+    for (const p of prestations(profil)) { const m = Math.round(p.montant * k * 100) / 100; banque.solde += m; evts.push({ t: e, texte: `${p.nom} versé(e) par ${p.organisme || 'la CAF'} : ${m.toFixed(2).replace('.', ',')} €` }); }
     const dep = depenses(profil, kva, options);
     const total = Math.round(dep.reduce((x, d) => x + d.montant, 0) * k * 100) / 100;
     banque.solde -= total;

@@ -1,4 +1,4 @@
-# Proof of Life — V0.15
+# Proof of Life — V0.16
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -27,6 +27,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Notifications et synchro manuelle (V0.13) : notifications du téléphone quand l'appli est en arrière-plan, import d'une sauvegarde exportée depuis un autre appareil.
 - Métiers et capital (V0.14) : 162 métiers dont des métiers très bien payés (médecins spécialistes, notaire, banquier d'affaires, PDG, sportifs professionnels…), capital de départ libre sans limite.
 - Temps accéléré et futur simulé (V0.15) : sauf en Réalité, la vitesse du temps se règle en jeu (jusqu'à 1 minute = 1 semaine) ; l'historique réel défile vite, puis au-delà d'aujourd'hui le marché, l'actualité, le réseau Bitcoin, les nouvelles machines, l'inflation et le prix de l'électricité sont simulés.
+- Métier et carrière (V0.16) : onglet Vie, diplômes exigés par métier, 37 formations (temps plein, cours du soir, alternance, CPF), progression débutant → confirmé → expérimenté, entretien annuel, demande d'augmentation, heures sup, événements du métier chaque mois, licenciement avec indemnité et chômage.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
@@ -96,6 +97,7 @@ Sur le téléphone, ouvrir le lien puis « Ajouter à l'écran d'accueil ».
 | `js/notifs.js` | Notifications du téléphone |
 | `js/simu.js` | Marché simulé au-delà d'aujourd'hui (testé) |
 | `js/economie.js` | Inflation et prix de l'électricité dans le temps (testé) |
+| `js/carriere.js`, `js/views-carriere.js` | Diplômes, formations, progression et événements du métier (testé), onglet Vie |
 | `js/views.js` | Écrans |
 | `js/chart.js` | Graphique en chandeliers |
 | `js/main.js` | Actions du joueur et mises à jour en direct |

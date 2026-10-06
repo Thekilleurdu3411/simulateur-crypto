@@ -259,3 +259,29 @@ Tout peut être changé : il suffit de le demander.
 | Perpétuels en rejeu et en simulation | Prix de marque reconstitué à partir du prix au comptant converti en USDT, financement autour de 0,01 % toutes les 8 h, liquidation au plus haut ou au plus bas de chaque bougie | Plus de données publiques du marché à terme dans ces cas. |
 | Rigs et Antminer L9 en temps accéléré | Pas encore disponibles hors direct | Pas d'historique ni de modèle pour ces réseaux pour l'instant. |
 | Rejeu avant 2020 | Pas encore fait (décision validée) | Prochaine étape. |
+
+## Validé par Valentin (6 octobre 2026) : la suite
+
+| Sujet | Choix |
+| --- | --- |
+| Ordre | V0.16 métier et carrière, V0.17 vie et activités, V0.18 réseaux sociaux et personnalités, V0.19 compétition, V0.20 entreprise crypto |
+| Personnalités | Fictives (pas de vraies personnes), inspirées des profils du milieu |
+| Discussions | Messages avec choix de réponses (hors ligne, gratuit) |
+| Compétition | Contre les personnalités du jeu |
+| Jauges de vie | Santé, énergie, moral, stress, avec de vraies conséquences |
+
+## V0.16 — Métier et carrière
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Nouvel onglet « Vie » | Carrière, formations et vie quotidienne (déplacée depuis Finances) | Tout ce qui touche à ta vie au même endroit. |
+| Diplômes | Chaque métier exige un diplôme précis (médecine, IFSI, ATPL, école de police…) ou un niveau d'études (CAP, bac+2, bac+3, bac+5, bac+8). Au départ, tu as ceux de ton métier de départ | Réalisme : on ne devient pas pilote ou radiologue sans formation. |
+| Formations | 37 formations avec un coût et une durée réalistes (frais publics 2026 : 178 € par an en licence, 254 € en master ; école de commerce 32 000 € ; ATPL 100 000 € ; bootcamp 7 000 €…), à temps plein (tu quittes ton emploi), en cours du soir (50 % plus long) ou en alternance (payé comme apprenti puis embauché). Certaines sont rémunérées (école de police, ENAC, contrat doctoral, internat de médecine) | Ordres de grandeur **à vérifier** métier par métier. |
+| CPF | 1 500 € au départ, +500 € par an travaillé (plafond 5 000 €), utilisable pour les formations éligibles (CAP, permis, bootcamp, certifications, BPJEPS…) | Règle du compte personnel de formation. |
+| Progression | Confirmé après 3 ans dans le métier, expérimenté après 8 ans ; entretien annuel avec 0,8 à 3,3 % d'augmentation (0,5 à 1,7 % dans la fonction publique), 10 % de chances de promotion (+6 à 12 %) ; demande d'augmentation une fois par an (35 % de réussite, +3 à 8 %) | Réalisme moyen. |
+| Changer de métier | Il faut le diplôme ; dans un nouveau métier on repart débutant | Réalisme. |
+| Heures supplémentaires | 0, 4 ou 8 h par semaine, payées 25 % de plus (+14 % ou +29 % de salaire) | La fatigue arrivera avec les jauges (V0.17). |
+| Événements du métier | Chaque mois, selon ton secteur : primes, heures sup, bonus annuel (finance, direction), accidents du travail (BTP, industrie, transport, agriculture), gardes (santé), soldes et fêtes (commerce), point d'indice (fonction publique), transferts (sport pro), arrêts maladie, licenciement économique (pas dans la fonction publique) | Probabilités **à ajuster** en jouant. |
+| Arrêt de travail | Perte de 35 % du salaire des jours d'arrêt en maladie (carence et indemnités journalières), 20 % en accident du travail | Approximation des indemnités journalières. |
+| Licenciement | Indemnité légale (1/4 de mois par année jusqu'à 10 ans, 1/3 au-delà), puis chômage : 72 % du salaire net pendant 18 mois (plafond 8 600 €) | Règles France Travail simplifiées. Démission : pas de chômage. |
+| Alternance | Au bout de 2 ans : diplôme et embauche comme débutant dans le métier | Réalisme. |

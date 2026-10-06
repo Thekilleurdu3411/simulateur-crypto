@@ -8,7 +8,8 @@ import { valeurParc } from './jeuminage.js';
 import { ongletPerp, valeurFutures } from './views-futures.js';
 import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
-import { sectionVie, apercuProfil } from './views-vie.js';
+import { apercuProfil } from './views-vie.js';
+import { ongletVie } from './views-carriere.js';
 import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES, TRANSPORTS } from './vie.js';
@@ -20,6 +21,7 @@ const ICONES = {
   marche: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
   minage: '<path d="M5 5h14v14H5z"/><path d="M9 9h6v6H9z"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
   installations: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  vie: '<circle cx="12" cy="7" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>',
   finances: '<path d="M3 7h18v12H3z"/><path d="M3 7l2-3h14l2 3"/><path d="M16 13h2"/>',
   retour: '<path d="M15 6l-6 6 6 6"/>',
   suivant: '<path d="M9 6l6 6-6 6"/>'
@@ -275,13 +277,13 @@ export function vueNouvellePartie(ctx) {
 // ---------- Jeu ----------
 
 const NOMS_ALT = { RVN: 'Ravencoin', ETC: 'Ethereum Classic', ERG: 'Ergo', XMR: 'Monero', KAS: 'Kaspa' };
-const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Minage'], ['installations', 'Installations'], ['finances', 'Finances']];
+const ONGLETS = [['accueil', 'Accueil'], ['marche', 'Marché'], ['minage', 'Minage'], ['installations', 'Installations'], ['vie', 'Vie'], ['finances', 'Finances']];
 
 export function vueJeu(ctx) {
   const { app, partie } = ctx;
   const d = reglesDe(partie);
   const corps = {
-    accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances,
+    accueil: ongletAccueil, marche: ongletMarche, finances: ongletFinances, vie: ongletVie,
     minage: c => ongletMinage(c, live),
     installations: c => ongletInstallations(c, live)
   }[app.onglet](ctx);
@@ -529,7 +531,6 @@ function ongletFinances(ctx) {
       <button class="bouton" data-action="virer">Virer</button>
       <p class="discret" style="font-size:12px">Virement SEPA instantané, sans frais.</p>
     </section>` : ''}
-    ${sectionVie(ctx)}
     ${sectionImpots(ctx)}
     ${journalHtml(partie, 30)}
     <section class="section">

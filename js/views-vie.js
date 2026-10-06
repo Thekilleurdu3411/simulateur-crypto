@@ -2,6 +2,7 @@
 import { SITUATIONS, METIERS, reglesDe } from './config.js';
 import { salaireNet, depenses, EXPERIENCES, loyer, prestations, TRANSPORTS, impotRevenu } from './vie.js';
 import { vieDe, periode, indice } from './jeuvie.js';
+import { possede, exigence, formationPour, nomDiplome } from './carriere.js';
 import { COMPTEUR } from './minage.js';
 import { eur, dateHeure, echapper as e } from './format.js';
 import { maintenant as tJeu } from './horloge.js';
@@ -39,9 +40,16 @@ export function sectionVie(ctx) {
       <div class="grille-2">${SITUATIONS.map(s => `<button class="choix" style="min-height:40px;padding:8px" data-action="carriere-sit" data-v="${s.id}" aria-pressed="${c.situation === s.id}">${s.nom}</button>`).join('')}</div>
       ${c.situation === 'salarie' || c.situation === 'alternant' ? `<label class="champ">Métier<select id="f-car-metier" data-input="car-metier">
         ${METIERS.map(([sect, ms]) => `<optgroup label="${e(sect)}">${ms.map(m => `<option ${m === c.metier ? 'selected' : ''}>${e(m)}</option>`).join('')}</optgroup>`).join('')}</select></label>` : ''}
-      ${c.situation === 'salarie' ? `<div class="segment">${EXPERIENCES.map(([id, nom]) => `<button data-action="carriere-exp" data-v="${id}" aria-pressed="${c.experience === id}">${nom}</button>`).join('')}</div>` : ''}
       ${c.situation === 'alternant' ? `<div class="segment">${[1, 2, 3].map(a => `<button data-action="carriere-annee" data-v="${a}" aria-pressed="${Number(c.annee) === a}">${a}${a === 1 ? 're' : 'e'} année</button>`).join('')}</div>` : ''}
-      <div class="ligne-kv" style="font-size:13px"><span>Salaire net</span><span class="num">${eur(salaireNet({ ...p, situation: c.situation, metier: c.metier, experience: c.experience, anneeApprentissage: c.annee }) * k)}</span></div>
+      ${(() => {
+        const memeMetier = c.situation === 'salarie' && p.situation === 'salarie' && c.metier === p.metier;
+        const xp = memeMetier ? p.experience : 'debutant';
+        const ok = c.situation !== 'salarie' || possede(p.diplomes || [], exigence(c.metier));
+        const f = ok ? null : formationPour(c.metier);
+        return `${c.situation === 'salarie' ? `<div class="ligne-kv" style="font-size:13px"><span>Niveau d'embauche</span><span>${memeMetier ? 'ton expérience actuelle' : 'débutant (nouveau métier)'}</span></div>` : ''}
+          <div class="ligne-kv" style="font-size:13px"><span>Salaire net</span><span class="num">${eur(salaireNet({ ...p, majoration: memeMetier ? p.majoration : 1, heuresSup: 0, situation: c.situation, metier: c.metier, experience: xp, anneeApprentissage: c.annee }) * k)}</span></div>
+          ${ok ? '' : `<div class="carte alerte" style="font-size:12px;padding:8px 10px">Diplôme requis : ${[].concat(exigence(c.metier)).map(nomDiplome).join(' ou ')}${f ? `. Formation : ${e(f.nom)} (${f.mois} mois)` : ''}.</div>`}`;
+      })()}
       <button class="bouton secondaire petit" data-action="carriere-valider">${c.situation === 'sans' ? 'Démissionner (préavis d\'un mois)' : 'Changer (début dans un mois)'}</button>
     </div></section>`;
 }

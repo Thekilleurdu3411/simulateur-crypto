@@ -12,7 +12,8 @@ import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } f
 import { traiterPeriode, rattraper } from './suivi.js';
 import { noterAchat, noterCession, definirEvaluateur, echeances, deposer } from './jeufisc.js';
 import { valeurDerivesEUR } from './jeufutures.js';
-import { avancerViePartie, changerSituation, annulerChangement } from './jeuvie.js';
+import { avancerViePartie, changerSituation, annulerChangement, commencerFormation, abandonnerFormation, demanderAugmentation, changerHeuresSup } from './jeuvie.js';
+import { formation as formationDef } from './carriere.js';
 import { TRANSPORTS } from './vie.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
 import { dessinerBougies } from './chart.js';
@@ -446,6 +447,20 @@ const actions = {
     app.carriere = null; sauver(partie); rendre(); toast('C\'est noté : changement dans un mois.', 'ok');
   },
   'annuler-carriere': () => { annulerChangement(partie); sauver(partie); rendre(); },
+  'heures-sup': v => { const r = changerHeuresSup(partie, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
+  augmentation: () => { const r = demanderAugmentation(partie); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast(r.ok ? `Augmentation obtenue : +${String(r.pct).replace('.', ',')} % !` : "Refusée : « pas cette année ». Retente dans un an.", r.ok ? 'ok' : ''); },
+  'formation-ouvrir': v => { app.formationOuverte = app.formationOuverte === v ? null : v; app.formationChoix = null; rendre(); },
+  'formation-mode': v => { const f = app.formationOuverte; app.formationChoix = { ...(app.formationChoix && app.formationChoix.id === f ? app.formationChoix : { id: f, metier: null }), mode: v }; rendre(); },
+  'formation-commencer': v => {
+    const ch = app.formationChoix && app.formationChoix.id === v ? app.formationChoix : { mode: 'plein' };
+    const sel = racine.querySelector('[data-input="formation-metier"]');
+    const metier = ch.metier ?? (sel ? sel.value : null);
+    const f = formationDef(v);
+    const go = () => { const r = commencerFormation(partie, v, ch.mode || 'plein', metier || null); if (r.erreur) return toast(r.erreur, 'erreur'); app.formationOuverte = null; app.formationChoix = null; sauver(partie); rendre(); toast('Formation commencée : ' + f.nom, 'ok'); };
+    if ((ch.mode || 'plein') === 'plein' && partie.profil.situation === 'salarie') confirmer('Quitter ton emploi ?', `Une formation à temps plein t'oblige à démissionner (pas de chômage après une démission). Pendant ${f.mois} mois, tu vivras ${f.paye ? 'de la rémunération de la formation' : "d'un job étudiant"}.`, 'Commencer', go);
+    else go();
+  },
+  'formation-abandonner': () => confirmer('Abandonner la formation ?', "L'argent payé est perdu et tu n'obtiens pas le diplôme.", 'Abandonner', () => { abandonnerFormation(partie); sauver(partie); rendre(); }, true),
   logement: v => { app.brouillon.profil.logement = v; rendre(); },
   transport: v => { app.brouillon.profil.transport = v; rendre(); },
   'transport-vie': v => { if (!partie) return; partie.profil.transport = v; journal(partie, 'vie', 'Transport : ' + (TRANSPORTS.find(t => t[0] === v) || [, v])[1]); sauver(partie); rendre(); },
@@ -665,6 +680,7 @@ document.addEventListener('input', ev => {
     const t = racine.querySelector(`[data-reg-val="${g.cle}"]`);
     if (t) t.textContent = valeurTexte(g, g.cle in app.brouillon.reglages ? app.brouillon.reglages[g.cle] : DIFFICULTES[app.brouillon.difficulte][g.cle]);
   }
+  else if (k === 'formation-metier') { app.formationChoix = { ...(app.formationChoix && app.formationChoix.id === app.formationOuverte ? app.formationChoix : { id: app.formationOuverte, mode: 'plein' }), metier: el.value }; }
   else if (k === 'car-metier') { carriere().metier = el.value; rendre(); }
   else if (k === 'capital') {
     app.brouillon.capitalSaisie = el.value;
