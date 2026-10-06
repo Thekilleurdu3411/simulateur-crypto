@@ -2,6 +2,7 @@
 // Fonctions pures ou qui ne touchent qu'à la partie passée en paramètre (testées).
 import { CATALOGUE, modele, btcParSeconde, disponible, marcheMachines } from './minage.js';
 import { rng } from './personnalites.js';
+import { jourExpansion, valeurAmorcage, salariesPlateforme, AGREMENTS, nouveauFonds, nouvellePlateforme } from './expansion.js';
 
 const JOUR = 864e5, MOIS = 30.4375 * JOUR, AN = 365.25 * JOUR;
 const jourDe = t => Math.floor(t / JOUR);
@@ -99,13 +100,13 @@ export function nouvelleEntreprise(nom, capital, t) {
   };
 }
 function nouvelExercice(t, fixes = 0) { return { an: new Date(t).getUTCFullYear(), ca: 0, trading: 0, elec: 0, loyers: 0, salaires: 0, fixes, amort: 0, agios: 0, plusValues: 0 }; }
-export function resultat(x) { return x.ca + x.trading + x.plusValues - x.elec - x.loyers - x.salaires - x.fixes - x.amort - x.agios; }
+export function resultat(x) { return x.ca + x.trading + x.plusValues + (x.gestion || 0) + (x.plateforme || 0) - x.elec - x.loyers - x.salaires - x.fixes - x.amort - x.agios - (x.activites || 0) - (x.pertes || 0); }
 /** Impôt sur les sociétés d'un bénéfice imposable. */
 export function impotSocietes(benefice) {
   if (benefice <= 0) return 0;
   return Math.min(benefice, IS.plafondReduit) * IS.tauxReduit + Math.max(0, benefice - IS.plafondReduit) * IS.taux;
 }
-export function salariesDe(e) { return e.techniciens + e.traders.length; }
+export function salariesDe(e) { return e.techniciens + e.traders.length + (e.plateforme ? salariesPlateforme(e.plateforme) : 0) + (e.fonds && e.fonds.statut === 'actif' ? 1 : 0); }
 export function chargesFixesMois(e) { const c = CHARGES_FIXES; return c.comptable + c.banque + c.assurance + c.parSalarie * salariesDe(e); }
 
 /** Valeur de la société (actif net) : trésorerie, bitcoins, machines (valeur comptable, au moins leur prix de revente), sites, capital confié aux traders (tel qu'annoncé). */
@@ -114,11 +115,40 @@ export function valeurEntreprise(e, prixBTC, eurUsd, t) {
   const machines = e.sites.reduce((a, s) => a + s.lots.reduce((b, l) => b + Math.max(l.prix * Math.max(0, 1 - (t - l.acheteLe) / (3 * AN)), valeurLot(l, eurUsd, t)), 0), 0);
   const traders = e.traders.reduce((a, x) => a + x.capitalAffiche, 0);
   const sites = e.sites.reduce((a, s) => a + valeurSite(s, t), 0);
-  return e.tresorerie + e.btc * (prixBTC || 0) + machines + traders + sites;
+  return e.tresorerie + e.btc * (prixBTC || 0) + machines + traders + sites + valeurAmorcage(e);
 }
 
 /** Valeur comptable d'un site (bâtiment, raccordement, refroidissement), amorti sur 10 ans. */
 export const valeurSite = (s, t) => s.travaux * Math.max(0, 1 - (t - s.construitLe) / (10 * AN));
+
+/** Ce que la société vaut pour toi : ton compte courant plus ta part des fonds propres (ou de la capitalisation si elle est cotée). */
+export function partEntreprise(e, prixBTC, eurUsd, t) {
+  if (!e || e.liquidee) return 0;
+  const propres = e.bourse && e.bourse.cotee ? e.bourse.capi : valeurEntreprise(e, prixBTC, eurUsd, t) - e.compteCourant;
+  return e.compteCourant + (e.parts ?? 1) * propres;
+}
+
+/** Demander un agrément (fonds ou plateforme) : dossier payé, fonds propres minimaux exigés. */
+export function demanderAgrement(e, type, t, valeurNette) {
+  const A = AGREMENTS[type];
+  if (!A) return { erreur: 'Agrément inconnu.' };
+  if (e[type]) return { erreur: 'Déjà demandé.' };
+  if (t < e.pretLe) return { erreur: 'La société n\'est pas encore immatriculée.' };
+  if (valeurNette < A.fondsPropres + A.dossier) return { erreur: `L'AMF exige au moins ${A.fondsPropres.toLocaleString('fr-FR')} € de fonds propres (en plus des ${A.dossier.toLocaleString('fr-FR')} € du dossier). Augmente-les avec des bénéfices ou du capital.` };
+  if (e.tresorerie < A.dossier) return { erreur: `Il faut ${A.dossier.toLocaleString('fr-FR')} € de trésorerie pour le dossier.` };
+  e.tresorerie -= A.dossier; e.exercice.activites = (e.exercice.activites || 0) + A.dossier;
+  e[type] = type === 'fonds' ? nouveauFonds(t) : nouvellePlateforme(t);
+  return { ok: true };
+}
+/** Augmentation de capital : tes euros deviennent des fonds propres (non remboursables). */
+export function augmenterCapital(partie, montant) {
+  const e = partie.entreprise;
+  if (!(montant > 0)) return { erreur: 'Montant invalide.' };
+  if (e.bourse) return { erreur: 'Société cotée : passe par une émission d\'actions (pas encore disponible).' };
+  if (partie.banque.solde < montant) return { erreur: 'Pas assez sur ton compte bancaire.' };
+  partie.banque.solde -= montant; e.capital += montant; e.tresorerie += montant;
+  return { ok: true };
+}
 
 // ---------- Une journée de la société ----------
 /**
@@ -131,20 +161,24 @@ export function avancerEntreprise(e, t, ctx, seed = 0) {
   let j = e.jour, n = 0;
   const rBTC = e.dernierBTC && ctx.prixBTC ? ctx.prixBTC / e.dernierBTC - 1 : 0;
   if (ctx.prixBTC) e.dernierBTC = ctx.prixBTC;
+  const d = e.derniers || (e.derniers = {});
+  const rend = k => (d[k] && ctx['prix' + k] ? ctx['prix' + k] / d[k] - 1 : k === 'BTC' ? rBTC : 0);
+  const r = { BTC: rBTC, ETH: rend('ETH'), ALT: rend('ALT') };
+  for (const k of ['ETH', 'ALT']) if (ctx['prix' + k]) d[k] = ctx['prix' + k];
   while (j < jourDe(t) && n++ < 400) {
     j++;
     const tj = j * JOUR;
     // Clôture de l'exercice au 31 décembre
     if (new Date(tj).getUTCFullYear() !== e.exercice.an) evts.push(...cloturer(e, tj));
-    unJour(e, tj, ctx, n === 1 ? rBTC : 0, rng(seed, j, 313), evts);
+    unJour(e, tj, ctx, n === 1 ? r : { BTC: 0, ETH: 0, ALT: 0 }, rng(seed, j, 313), evts);
     if (e.liquidee) break;
   }
   e.jour = jourDe(t);
   return evts;
 }
 
-function unJour(e, t, ctx, rBTC, R, evts) {
-  const x = e.exercice, d = 1 / 30.4375;
+function unJour(e, t, ctx, r, R, evts) {
+  const x = e.exercice, d = 1 / 30.4375, rBTC = r.BTC;
   // Livraisons et chantiers
   for (const s of e.sites) {
     if (!s.ouvert && t >= s.pretLe) { s.ouvert = true; evts.push(`${s.nom} : le site est prêt, les machines peuvent tourner.`); }
@@ -201,6 +235,8 @@ function unJour(e, t, ctx, rBTC, R, evts) {
       e.scandales = (e.scandales || 0) + 1;
     }
   }
+  // Fonds, plateforme d'échange, Bourse
+  if (e.fonds || e.plateforme || e.bourse) jourExpansion(e, x, t, r, ctx, R, evts, e.bourse ? valeurEntreprise(e, ctx.prixBTC, ctx.eurUsd, t) - e.compteCourant : 0);
   // Découvert : agios, puis liquidation judiciaire si ça dure
   if (e.tresorerie < 0) {
     const a = -e.tresorerie * AGIOS / 365;
@@ -241,9 +277,9 @@ function liquider(e, t, ctx, evts) {
   // Tout est vendu à la casse (moitié de la valeur), les dettes sont payées, l'associé récupère ce qui reste.
   const actifs = e.btc * (ctx.prixBTC || 0) * 0.98 + e.traders.reduce((a, tr) => a + tr.capital, 0)
     + e.sites.reduce((a, s) => a + s.lots.reduce((b, l) => b + valeurLot(l, ctx.eurUsd, t) * 0.5, 0), 0);
-  const solde = e.tresorerie + actifs + e.sites.reduce((a, s) => a + valeurSite(s, t) * 0.3, 0);
+  const solde = (e.tresorerie + actifs + valeurAmorcage(e) + e.sites.reduce((a, s) => a + valeurSite(s, t) * 0.3, 0)) * (e.parts ?? 1);
   e.liquidee = { t, rendu: Math.max(0, solde) };
-  e.sites = []; e.traders = []; e.btc = 0; e.techniciens = 0; e.tresorerie = 0;
+  e.sites = []; e.traders = []; e.btc = 0; e.techniciens = 0; e.tresorerie = 0; e.fonds = null; e.plateforme = null;
   evts.push(`Liquidation judiciaire de ${e.nom}. ${solde > 0 ? `Il te revient ${Math.round(solde).toLocaleString('fr-FR')} €.` : 'Il ne te revient rien, ton compte courant d\'associé est perdu.'}`);
 }
 
@@ -367,7 +403,8 @@ export function distribuer(partie, montant) {
   if (montant > e.reserves) return { erreur: `Bénéfices distribuables : ${Math.max(0, Math.round(e.reserves)).toLocaleString('fr-FR')} € (exercices clôturés seulement).` };
   if (montant > e.tresorerie) return { erreur: 'Pas assez de trésorerie.' };
   e.tresorerie -= montant; e.reserves -= montant; e.dividendes += montant;
-  const net = montant * (1 - PFU);
+  const brut = montant * (e.parts ?? 1); // les autres actionnaires touchent leur part
+  const net = brut * (1 - PFU);
   partie.banque.solde += net;
-  return { net, impot: montant - net };
+  return { net, impot: brut - net, brut };
 }

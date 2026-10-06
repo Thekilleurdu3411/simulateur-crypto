@@ -7,6 +7,7 @@ import { creerSimulation, prixSimu } from './simu.js';
 import { avancerSocial, repondre, resilierVip, retirerFonds, publier, valeurFonds, classement } from './jeusocial.js';
 import { avancerCompetition, accepterDefi, refuserDefi, changerRival } from './competition.js';
 import * as E from './entreprise.js';
+import * as X from './expansion.js';
 import { moisDe } from './views-entreprise.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
@@ -489,6 +490,35 @@ const actions = {
   'ent-apport': () => fluxEntreprise(E.apporter, m => `Apport de ${eur(m)} en compte courant d'associé.`),
   'ent-rembourser': () => fluxEntreprise(E.rembourser, m => `Remboursement de ${eur(m)} de ton compte courant d'associé.`),
   'ent-dividendes': () => fluxEntreprise(E.distribuer, (m, r) => `Dividendes : ${eur(m)} bruts, ${eur(r.net)} nets après flat tax.`),
+  'ent-capital': () => fluxEntreprise(E.augmenterCapital, m => `Augmentation de capital de ${eur(m)}.`),
+  'ent-agrement': v => {
+    const A = X.AGREMENTS[v], ent = partie.entreprise;
+    confirmer('Demander l\'agrément ?', `${A.nom}. Dossier ${eur(A.dossier)} payé par la société, réponse dans ${Math.round(A.delai / 30)} mois.`, 'Déposer le dossier', () => {
+      const r = E.demanderAgrement(ent, v, tJeu(), E.valeurEntreprise(ent, prixEUR('BTC'), D.etat.eurUsd, tJeu()) - ent.compteCourant);
+      if (r.erreur) return toast(r.erreur, 'erreur');
+      journal(partie, 'vie', `${ent.nom} dépose un dossier d'agrément : ${A.nom}.`); sauver(partie); rendre(); toast('Dossier déposé.', 'ok');
+    });
+  },
+  'ent-strategie': v => { partie.entreprise.fonds.strategie = v; sauver(partie); rendre(); },
+  'ent-pub-fonds': v => { partie.entreprise.fonds.marketing = Number(v); sauver(partie); rendre(); },
+  'ent-pub-pf': v => { partie.entreprise.plateforme.marketing = Number(v); sauver(partie); rendre(); },
+  'ent-securite': v => { partie.entreprise.plateforme.securite = v; sauver(partie); rendre(); },
+  'ent-amorcer': v => {
+    const m = lireEuros('f-ent-amorce'); if (!(m > 0)) return toast('Indique un montant.', 'erreur');
+    const r = X.amorcer(partie.entreprise, m * Number(v)); if (r.erreur) return toast(r.erreur, 'erreur');
+    sauver(partie); rendre(); toast(Number(v) > 0 ? 'Placé dans le fonds.' : 'Retiré du fonds.', 'ok');
+  },
+  'ent-bourse': () => confirmer('Préparer l\'introduction en Bourse ?', `${eur(X.BOURSE.fixe)} de frais tout de suite (banque conseil, avocats, auditeurs), puis ${Math.round(X.BOURSE.commission * 100)} % des sommes levées. Cotation dans ${Math.round(X.BOURSE.delai / 30)} mois.`, 'Lancer', () => {
+    const ent = partie.entreprise;
+    const r = X.preparerBourse(ent, tJeu(), E.valeurEntreprise(ent, prixEUR('BTC'), D.etat.eurUsd, tJeu()) - ent.compteCourant);
+    if (r.erreur) return toast(r.erreur, 'erreur');
+    journal(partie, 'vie', `${ent.nom} prépare son introduction en Bourse.`); sauver(partie); rendre(); toast('Introduction lancée.', 'ok');
+  }),
+  'ent-vendre-actions': v => confirmer(`Vendre ${String(Number(v) * 100).replace('.', ',')} % du capital ?`, 'Vente sur le marché avec une petite décote, flat tax sur la plus-value.', 'Vendre', () => {
+    const r = X.vendreActions(partie, Number(v), E.PFU); if (r.erreur) return toast(r.erreur, 'erreur');
+    const txt = `Vente d'actions ${partie.entreprise.nom} : ${eur(r.brut)}, ${eur(r.net)} nets après impôt.`;
+    journal(partie, 'vie', txt); sauver(partie); rendre(); toast(txt, 'ok');
+  }),
   'ent-tech': v => { const ent = partie.entreprise; const r = E.changerTechniciens(ent, Math.max(0, ent.techniciens + Number(v))); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
   'ent-vendre-btc-auto': v => { partie.entreprise.vendreBTC = v === '1'; sauver(partie); rendre(); },
   'ent-vendre-btc': () => { const r = E.vendreBitcoins(partie.entreprise, prixEUR('BTC')); if (r.erreur) return toast(r.erreur, 'erreur'); journal(partie, 'vie', `${partie.entreprise.nom} vend ses bitcoins : ${eur(r.montant)}.`); sauver(partie); rendre(); toast('Vendu : ' + eur(r.montant), 'ok'); },
@@ -809,7 +839,7 @@ document.addEventListener('input', ev => {
   else if (k === 'rig-nb') { app.rig.nb = Number(el.value); const t = racine.querySelector('[data-rig-nb]'); if (t) t.textContent = el.value; }
 });
 
-document.addEventListener('change', ev => { const k = ev.target.dataset && ev.target.dataset.input; if (k === 'rival' && partie) { changerRival(partie, ev.target.value); sauver(partie); rendre(); return; } if (k && (['rig-nb', 'perp-levier'].includes(k) || k.startsWith('reg:'))) rendre(); });
+document.addEventListener('change', ev => { const k = ev.target.dataset && ev.target.dataset.input; if (k === 'rival' && partie) { changerRival(partie, ev.target.value); sauver(partie); rendre(); return; } if (k === 'ent-gerant' && partie?.entreprise?.fonds) { partie.entreprise.fonds.gerant = ev.target.value || null; sauver(partie); rendre(); return; } if (k && (['rig-nb', 'perp-levier'].includes(k) || k.startsWith('reg:'))) rendre(); });
 
 // ---------- Démarrage ----------
 
@@ -855,7 +885,7 @@ function fluxEntreprise(f, texte) {
 
 function patrimoineTotal() {
   if (!partie) return null;
-  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, prixEUR) + (partie.entreprise ? E.valeurEntreprise(partie.entreprise, prixEUR('BTC'), D.etat.eurUsd, tJeu()) : 0)).total; } catch (e) { return null; }
+  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie) + valeurFonds(partie, prixEUR) + E.partEntreprise(partie.entreprise, prixEUR('BTC'), D.etat.eurUsd, tJeu())).total; } catch (e) { return null; }
 }
 
 // Réseau social : publications des personnalités, messages, pronostics (une fois par jour de jeu).
@@ -863,7 +893,17 @@ function patrimoineTotal() {
 function avancerEntrepriseJeu() {
   const ent = partie && partie.entreprise;
   if (!ent || ent.liquidee) return;
-  const evts = E.avancerEntreprise(ent, tJeu(), { prixBTC: prixEUR('BTC'), eurUsd: D.etat.eurUsd, reseau: D.etat.reseau }, ((partie.creeLe || 0) / 1000) | 0);
+  const evts = E.avancerEntreprise(ent, tJeu(), {
+    prixBTC: prixEUR('BTC'), prixETH: prixEUR('ETH'), prixALT: prixEUR('SOL'), eurUsd: D.etat.eurUsd, reseau: D.etat.reseau,
+    reputation: partie.social ? partie.social.reputation : 50
+  }, ((partie.creeLe || 0) / 1000) | 0);
+  // Réactions sur le réseau social et choc de réputation (piratage…)
+  if (ent.flash && ent.flash.length) {
+    const s = partie.social;
+    if (s) for (const f of ent.flash) s.fil.unshift({ auteur: f.de, texte: f.texte, t: tJeu(), likes: Math.round(100 + Math.random() * 3000) });
+    ent.flash = [];
+  }
+  if (ent.reputationChoc && partie.social) { partie.social.reputation = Math.max(0, partie.social.reputation + ent.reputationChoc); ent.reputationChoc = 0; }
   if (ent.liquidee && !ent.liquidee.verse) { partie.banque.solde += ent.liquidee.rendu; ent.liquidee.verse = true; }
   if (!evts.length) return;
   for (const x of evts) journal(partie, 'vie', x);

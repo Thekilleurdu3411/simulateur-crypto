@@ -344,3 +344,17 @@ Tout peut être changé : il suffit de le demander.
 | Patrimoine | La valeur de la société (trésorerie, bitcoins, machines et sites à leur valeur comptable, capital des traders) compte dans ton patrimoine et le classement | Cohérence. |
 | Trophées | Entrepreneur, Industriel, Salle de marché | Compétition. |
 | Suite (V0.21) | Fonds d'investissement ouvert aux clients, plateforme d'échange, introduction en Bourse | Découpage pour livrer plus tôt. |
+
+## V0.21 — L'entreprise grandit : fonds, plateforme, Bourse
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Capital | Augmentation de capital possible (avant la Bourse) : l'argent devient des fonds propres, non remboursables | Les agréments exigent des fonds propres. |
+| Agréments | Société de gestion (AMF) : dossier 40 000 €, 6 mois, 125 000 € de fonds propres. Plateforme d'échange (MiCA) : dossier 250 000 €, 9 mois, 150 000 € de fonds propres | Règles réelles simplifiées ; montants **à vérifier**. |
+| Fonds | Stratégies prudente (30 % BTC, 70 % monétaire à 2,5 %), équilibrée (60 % BTC, 20 % ETH, 20 % monétaire), offensive (50 % BTC, 30 % ETH, 20 % autres) ; un trader de la société comme gérant (son talent compte) ; 2 % de frais de gestion par an, 20 % de commission au-dessus du plus haut historique au 1er janvier ; dépositaire 0,05 %, responsable de la conformité 6 500 € par mois | Fonctionnement d'un fonds. |
+| Clients du fonds | Arrivent avec la publicité (0 à 100 000 € par mois), ta réputation et la performance sur un an ; partent quand elle est sous −15 % | Réalisme. **À ajuster**. |
+| Plateforme | Clients amenés par la publicité (environ 90 € par client au début, plus cher en grandissant) et le bouche-à-oreille, 2 % de départs par mois ; environ 6 € de commissions par client et par mois, plus quand le marché s'agite ; 8 salariés plus 1 pour 4 000 clients (6 500 € par mois chacun), serveurs, sécurité minimale, standard ou renforcée (3 000, 20 000 ou 80 000 € par mois) | Économie d'une plateforme. **À ajuster**. |
+| Piratage | Risque selon la sécurité ; 3 à 15 % des dépôts des clients volés, remboursés par la société ; 30 % des clients partent, ta réputation chute, le journaliste en parle | Affaires réelles. |
+| Introduction en Bourse | Euronext Growth ; 2 années de comptes et une valeur d'au moins 20 M€ (actif net ou 15 fois le dernier bénéfice) ; 300 000 € de frais et 7 % des sommes levées ; 4 mois de préparation ; 25 % d'actions nouvelles, prix fixé entre −15 % et +15 % de la valeur juste | Ordres de grandeur d'une petite introduction. |
+| Cours | Suit le bitcoin (bêta 0,9), revient lentement vers la valeur juste, volatilité de 60 % par an | Valeur crypto cotée. |
+| Après la Bourse | Tes actions comptent à la valeur de marché ; vente par tranches de 1, 5 ou 10 % du capital (3 % de décote, flat tax sur la plus-value) ; les dividendes sont partagés avec les autres actionnaires | Réalisme. |
