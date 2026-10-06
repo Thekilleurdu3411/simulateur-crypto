@@ -6,13 +6,14 @@ import { reglerHorloge, enRejeu, accelere, visibilite, changerVitesse, vitesseAc
 import { creerSimulation } from './simu.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
-import { acheterAuMarche, vendreAuMarche } from './engine.js';
+import { acheterAuMarche, vendreAuMarche, patrimoine } from './engine.js';
 import { preparerOrdre, reserveAchat } from './orders.js';
 import { appliquerAchat, appliquerVente, placerOrdre, annulerOrdre, ordresDe } from './portefeuille.js';
 import { traiterPeriode, rattraper } from './suivi.js';
 import { noterAchat, noterCession, definirEvaluateur, echeances, deposer } from './jeufisc.js';
 import { valeurDerivesEUR } from './jeufutures.js';
-import { avancerViePartie, changerSituation, annulerChangement, commencerFormation, abandonnerFormation, demanderAugmentation, changerHeuresSup } from './jeuvie.js';
+import { avancerViePartie, changerSituation, annulerChangement, commencerFormation, abandonnerFormation, demanderAugmentation, changerHeuresSup, avancerJauges, faireActivite, abonnementSport, acheterLogement, vendreLogement, demenager, acheterVoiture, vendreVoiture, valeurBiens } from './jeuvie.js';
+import { penaliteFatigue } from './bienetre.js';
 import { formation as formationDef } from './carriere.js';
 import { TRANSPORTS } from './vie.js';
 import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, valeurLive, nombre } from './views.js';
@@ -20,7 +21,7 @@ import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
 import * as F from './marchefutures.js';
 import { futuresDe, transferer, ouvrirPosition, fermerPosition, surPrixMarque, rattraper as rattraperFut, surBougieSpot } from './jeufutures.js';
-import { acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
+import { valeurParc, acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
 import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
 import { marcheMachines, modele, prixMachineEUR, LIVRAISON, jourTempo, VENTILATION, MODES, HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur } from './minage.js';
@@ -241,7 +242,7 @@ async function passerOrdre() {
   let res;
   try {
     const [regles, livre] = await Promise.all([M.regles(c.s), M.carnet(c.s)]);
-    const commun = { carnet: livre, mode: d.execution, tauxFrais: d.frais, pas: regles.pas, minNotional: regles.minNotional };
+    const commun = { carnet: livre, mode: d.execution, tauxFrais: d.frais + penaliteFatigue(partie.jauges), pas: regles.pas, minNotional: regles.minNotional };
     res = achat ? acheterAuMarche({ ...commun, budget: montant }) : vendreAuMarche({ ...commun, quantite });
   } catch (e) {
     res = { erreur: 'Impossible de joindre la plateforme. Vérifie ta connexion et réessaie.' };
@@ -447,6 +448,18 @@ const actions = {
     app.carriere = null; sauver(partie); rendre(); toast('C\'est noté : changement dans un mois.', 'ok');
   },
   'annuler-carriere': () => { annulerChangement(partie); sauver(partie); rendre(); },
+  activite: v => { const r = faireActivite(partie, v); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast(r.moitie ? 'Fait, mais effet réduit : tu l\'as fait récemment.' : 'Ça fait du bien !', 'ok'); },
+  'abonnement-sport': () => { abonnementSport(partie, !partie.profil.abonnementSport); sauver(partie); rendre(); },
+  'achat-type': v => { app.achatLogement = { ...(app.achatLogement || { apport: '' }), type: v }; rendre(); },
+  'acheter-logement': () => {
+    const a = app.achatLogement || {}; const apport = Number(String(a.apport || '').replace(/\s/g, '').replace(',', '.')) || 0;
+    confirmer('Acheter ce logement ?', 'Ton loyer sera remplacé par la mensualité du prêt, la taxe foncière et les charges.', 'Acheter', () => { const r = acheterLogement(partie, a.type || 'appart', apport); if (r.erreur) return toast(r.erreur, 'erreur'); app.achatLogement = null; sauver(partie); rendre(); toast('Félicitations, tu es propriétaire !', 'ok'); });
+  },
+  'vendre-logement': () => confirmer('Vendre ton logement ?', "L'agence prend 5 %, le prêt est remboursé, tu redeviens locataire.", 'Vendre', () => { const r = vendreLogement(partie); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Logement vendu : ' + eur(r.net), 'ok'); }),
+  'dem-type': v => { app.demenagement = { ...(app.demenagement || { ville: partie.profil.ville || '' }), logement: v }; rendre(); },
+  demenager: () => { const d = app.demenagement || { ville: partie.profil.ville, logement: partie.profil.logement }; const r = demenager(partie, (d.ville || '').trim(), d.logement || partie.profil.logement); if (r.erreur) return toast(r.erreur, 'erreur'); app.demenagement = null; sauver(partie); preparerMeteo(); rendre(); toast('Déménagement fait !', 'ok'); },
+  'acheter-voiture': v => { const [id, mode] = v.split(':'); const r = acheterVoiture(partie, id, mode === 'credit'); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast('Voiture achetée !', 'ok'); },
+  'vendre-voiture': () => confirmer('Vendre ta voiture ?', 'Tu passeras aux transports en commun.', 'Vendre', () => { vendreVoiture(partie); sauver(partie); rendre(); }),
   'heures-sup': v => { const r = changerHeuresSup(partie, Number(v)); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); },
   augmentation: () => { const r = demanderAugmentation(partie); if (r.erreur) return toast(r.erreur, 'erreur'); sauver(partie); rendre(); toast(r.ok ? `Augmentation obtenue : +${String(r.pct).replace('.', ',')} % !` : "Refusée : « pas cette année ». Retente dans un an.", r.ok ? 'ok' : ''); },
   'formation-ouvrir': v => { app.formationOuverte = app.formationOuverte === v ? null : v; app.formationChoix = null; rendre(); },
@@ -680,6 +693,8 @@ document.addEventListener('input', ev => {
     const t = racine.querySelector(`[data-reg-val="${g.cle}"]`);
     if (t) t.textContent = valeurTexte(g, g.cle in app.brouillon.reglages ? app.brouillon.reglages[g.cle] : DIFFICULTES[app.brouillon.difficulte][g.cle]);
   }
+  else if (k === 'achat-apport') { app.achatLogement = { ...(app.achatLogement || { type: partie.profil.logement === 'maison' ? 'maison' : 'appart' }), apport: el.value }; clearTimeout(app.minuterieApport); app.minuterieApport = setTimeout(rendre, 600); }
+  else if (k === 'dem-ville') { app.demenagement = { ...(app.demenagement || { logement: partie.profil.logement }), ville: el.value }; }
   else if (k === 'formation-metier') { app.formationChoix = { ...(app.formationChoix && app.formationChoix.id === app.formationOuverte ? app.formationChoix : { id: app.formationOuverte, mode: 'plein' }), metier: el.value }; }
   else if (k === 'car-metier') { carriere().metier = el.value; rendre(); }
   else if (k === 'capital') {
@@ -733,6 +748,11 @@ setInterval(() => {
 }, 1000);
 
 if (partie) verifierKyc(partie) && sauver(partie);
+
+function patrimoineTotal() {
+  if (!partie) return null;
+  try { return patrimoine(partie, prixEUR, valeurParc(partie, D.etat.eurUsd), valeurDerivesEUR(partie, F.etat.marques, D.etat.eurUsd), valeurBiens(partie)).total; } catch (e) { return null; }
+}
 
 // Simulation du marché au-delà d'aujourd'hui (temps accéléré) : enregistrée dans la partie.
 M.brancherSimulation(() => partie && partie.simulation, async ({ debut, prix, volumes, stats0 }) => {
@@ -809,7 +829,7 @@ setInterval(() => preparerMeteo(), 36e5);
 let dernierSauvetage = Date.now();
 function avancerVieJeu(depuis) {
   if (!partie) return;
-  const evts = avancerViePartie(partie);
+  const evts = [...avancerViePartie(partie), ...avancerJauges(partie, tJeu(), { patrimoine: patrimoineTotal() })];
   if (evts.length) {
     sauver(partie);
     if (depuis) ajouterAbsence(depuis, evts); else toast(evts[evts.length - 1], '');

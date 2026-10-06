@@ -294,13 +294,18 @@ export function salaireNet(profil) {
 }
 
 export function loyer(profil) {
+  if (profil.logement === 'parents' || profil.proprietaire) return 0;
+  return loyerMarche(profil);
+}
+/** Loyer de marché du logement (même si on en est propriétaire). */
+export function loyerMarche(profil) {
   if (profil.logement === 'parents') return 0;
   const t2 = LOYERS_T2[normaliser(profil.ville)] ?? LOYER_M2_DEFAUT * 40;
   return profil.logement === 'maison' ? t2 * FACTEUR_MAISON : t2;
 }
 
 /** Dépenses mensuelles détaillées. */
-export function depenses(profil, kva = 6, { impot = true } = {}) {
+export function depenses(profil, kva = 6, { impot = true, t = null } = {}) {
   const mode = profil.modeVie || 'normal';
   const chezParents = profil.logement === 'parents';
   const l = [
@@ -311,7 +316,12 @@ export function depenses(profil, kva = 6, { impot = true } = {}) {
     ['Forfait mobile et internet', chezParents ? 15 : FORFAITS.internetMobile],
     ['Assurance habitation', chezParents ? 0 : FORFAITS.assuranceHabitation],
     ['Abonnement électricité', chezParents ? 0 : ABONNEMENT_ELEC_MOIS[kva] || ABONNEMENT_ELEC_MOIS[6]],
-    ['Impôt sur le revenu (prélèvement à la source)', impot ? impotRevenu(profil) / 12 : 0]
+    ['Impôt sur le revenu (prélèvement à la source)', impot ? impotRevenu(profil) / 12 : 0],
+    // Propriétaire : crédit, taxe foncière et charges ; voiture à crédit ; salle de sport
+    ['Crédit immobilier', profil.proprietaire && !(t >= profil.proprietaire.fin) ? profil.proprietaire.mensualite : 0],
+    ['Taxe foncière et charges', profil.proprietaire ? profil.proprietaire.taxeMois + profil.proprietaire.chargesMois : 0],
+    ['Crédit auto', profil.voiture && profil.voiture.credit && !(t >= profil.voiture.credit.fin) ? profil.voiture.credit.mensualite : 0],
+    ['Abonnement salle de sport', profil.abonnementSport ? 35 : 0]
   ];
   return l.filter(([, v]) => v > 0).map(([nom, montant]) => ({ nom, montant: Math.round(montant * 100) / 100 }));
 }
@@ -349,7 +359,7 @@ export function avancerVie(vie, banque, profil, t0, t1, periode, kva, options = 
     const s = Math.round(salaireNet(profil) * k * 100) / 100;
     if (s > 0) { banque.solde += s; evts.push({ t: e, texte: `Salaire reçu : ${s.toFixed(2).replace('.', ',')} €` }); }
     for (const p of prestations(profil)) { const m = Math.round(p.montant * k * 100) / 100; banque.solde += m; evts.push({ t: e, texte: `${p.nom} versé(e) par ${p.organisme || 'la CAF'} : ${m.toFixed(2).replace('.', ',')} €` }); }
-    const dep = depenses(profil, kva, options);
+    const dep = depenses(profil, kva, { ...options, t: e });
     const total = Math.round(dep.reduce((x, d) => x + d.montant, 0) * k * 100) / 100;
     banque.solde -= total;
     evts.push({ t: e, texte: `Dépenses du mois (loyer, courses, forfaits, loisirs${dep.some(d => d.nom.startsWith('Impôt')) ? ', impôt' : ''}) : ${total.toFixed(2).replace('.', ',')} €` + (banque.solde < 0 ? ' · compte à découvert' : '') });

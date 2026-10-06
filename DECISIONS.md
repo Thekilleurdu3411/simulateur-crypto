@@ -285,3 +285,15 @@ Tout peut être changé : il suffit de le demander.
 | Arrêt de travail | Perte de 35 % du salaire des jours d'arrêt en maladie (carence et indemnités journalières), 20 % en accident du travail | Approximation des indemnités journalières. |
 | Licenciement | Indemnité légale (1/4 de mois par année jusqu'à 10 ans, 1/3 au-delà), puis chômage : 72 % du salaire net pendant 18 mois (plafond 8 600 €) | Règles France Travail simplifiées. Démission : pas de chômage. |
 | Alternance | Au bout de 2 ans : diplôme et embauche comme débutant dans le métier | Réalisme. |
+
+## V0.17 — Vie, activités, logement et voiture
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Jauges | Santé, énergie, moral, stress (0 à 100), mises à jour chaque jour de jeu : sommeil et week-ends reposent ; travail (selon la pénibilité et la pression du secteur), heures sup, trading, découvert, chômage, grosses pertes fatiguent ou stressent ; mode de vie et salle de sport jouent aussi | Choix de Valentin : jauges avec vraies conséquences. Valeurs **à ajuster** en jouant. |
+| Conséquences | Stress ≥ 85 pendant 14 jours : burn-out (30 à 90 jours d'arrêt) ; santé < 25 : maladie (7 à 14 jours) ; énergie < 15 : trades plus chers (+0,5 % de frais, erreurs de fatigue) ; moral < 30 : entretien annuel décevant ; moral et énergie jouent sur les demandes d'augmentation | Choix de Valentin. |
+| Activités | 17 activités (footing, sport, méditation, sorties, restaurant, cinéma, concert, spa, médecin, psychologue, bénévolat, week-end, vacances, voyage…) avec un coût et des effets ; effet réduit de moitié si refaite trop tôt ; vacances et voyages utilisent les congés payés (25 jours par an) ; abonnement à la salle de sport 35 € par mois | Prix courants, indexés sur l'inflation. |
+| Achat du logement | Prix ≈ 20 ans de loyer de ta ville (rendement brut de 5 %), frais de notaire 7,5 %, apport d'au moins 10 % plus les frais, prêt sur 20 ans à 3,3 % + 0,3 % d'assurance, refus au-delà de 35 % de taux d'effort ; propriétaire : mensualité, taxe foncière (1 mois de loyer par an) et charges (10 % du loyer en appartement) au lieu du loyer ; valeur qui suit l'inflation +1 % par an ; revente avec 5 % d'agence | Règles bancaires françaises (HCSF) ; prix et taux **à vérifier** par ville. |
+| Déménagement | Nouvelle ville et type de logement, frais de déménagement (600 à 1 200 €) et un mois de loyer d'agence ; impossible en étant propriétaire sans vendre | Réalisme. |
+| Voiture | Occasion 9 000 € ou neuve 27 000 €, au comptant ou à crédit (6 %, 4 ans, 10 % d'apport) ; décote 20 % la première année puis 10 à 15 % par an ; les parties existantes en voiture en ont une d'occasion | Prix moyens 2026 **à vérifier**. |
+| Patrimoine | Logement et voiture (crédits déduits) comptent dans le patrimoine total | Réalisme. |

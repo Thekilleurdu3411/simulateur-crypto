@@ -10,6 +10,7 @@ import { valeurDerivesEUR } from './jeufutures.js';
 import { sectionImpots } from './views-fisc.js';
 import { apercuProfil } from './views-vie.js';
 import { ongletVie } from './views-carriere.js';
+import { valeurBiens } from './jeuvie.js';
 import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES, TRANSPORTS } from './vie.js';
@@ -67,7 +68,7 @@ export function valeurLive(cle, ctx) {
     case 'factureHeb': { const mn = partie.minage; return { t: mn ? eur(mn.factureHebEUR || 0) + ' · ' + Math.round(mn.factureHebKWh || 0).toLocaleString('fr-FR') + ' kWh' : '—' }; }
   }
   if (!partie) return { t: '' };
-  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd), valeurDerivesEUR(partie, ctx.F?.etat.marques || {}, ctx.D?.etat.eurUsd));
+  const P = patrimoine(partie, M.prixDeBase, valeurParc(partie, ctx.D?.etat.eurUsd), valeurDerivesEUR(partie, ctx.F?.etat.marques || {}, ctx.D?.etat.eurUsd), valeurBiens(partie));
   switch (k) {
     case 'patrimoine': return { t: eur(P.total) };
     case 'perf': { const d = P.total - partie.capitalDepart; return { t: eurSigne(d) + ' (' + pct(d / partie.capitalDepart) + ')', cls: d >= 0 ? 'hausse' : 'baisse' }; }
@@ -75,6 +76,7 @@ export function valeurLive(cle, ctx) {
     case 'plat': return { t: eur(P.plateforme) };
     case 'actifs': return { t: eur(P.actifs) };
     case 'machines': return { t: eur(P.machines) };
+    case 'biens': return { t: eur(P.biens) };
     case 'val': { const a = partie.plateforme.actifs[arg], p = M.prixDeBase(arg); return { t: a && p ? eur(a.qte * p) : '—' }; }
     case 'pv': {
       const a = partie.plateforme.actifs[arg], p = M.prixDeBase(arg);
@@ -333,6 +335,7 @@ function ongletAccueil(ctx) {
         <div><span class="l">Plateforme</span>${live('plat', ctx, 'v')}</div>
         <div><span class="l">Cryptos</span>${live('actifs', ctx, 'v')}</div>
         <div><span class="l">Machines (revente)</span>${live('machines', ctx, 'v')}</div>
+        ${partie.profil.proprietaire || partie.profil.voiture ? `<div><span class="l">Logement et voiture</span>${live('biens', ctx, 'v')}</div>` : ''}
       </div>
     </section>
     ${guide ? `<section class="carte"><div class="carte-titre">Pour bien démarrer</div>

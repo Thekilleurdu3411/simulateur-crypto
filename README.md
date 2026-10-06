@@ -1,4 +1,4 @@
-# Proof of Life — V0.16
+# Proof of Life — V0.17
 
 Jeu mobile de trading et de minage crypto branché sur le vrai marché, en temps réel, avec une vraie vie à gérer à côté.
 Application web installable (PWA) : elle s'ouvre dans le navigateur du téléphone et s'ajoute à l'écran d'accueil comme une vraie appli.
@@ -28,6 +28,7 @@ Application web installable (PWA) : elle s'ouvre dans le navigateur du télépho
 - Métiers et capital (V0.14) : 162 métiers dont des métiers très bien payés (médecins spécialistes, notaire, banquier d'affaires, PDG, sportifs professionnels…), capital de départ libre sans limite.
 - Temps accéléré et futur simulé (V0.15) : sauf en Réalité, la vitesse du temps se règle en jeu (jusqu'à 1 minute = 1 semaine) ; l'historique réel défile vite, puis au-delà d'aujourd'hui le marché, l'actualité, le réseau Bitcoin, les nouvelles machines, l'inflation et le prix de l'électricité sont simulés.
 - Métier et carrière (V0.16) : onglet Vie, diplômes exigés par métier, 37 formations (temps plein, cours du soir, alternance, CPF), progression débutant → confirmé → expérimenté, entretien annuel, demande d'augmentation, heures sup, événements du métier chaque mois, licenciement avec indemnité et chômage.
+- Vie et activités (V0.17) : jauges de santé, énergie, moral et stress avec conséquences (burn-out, maladie, erreurs de trading), 17 activités et vacances avec congés payés, achat de logement à crédit, déménagement, voiture.
 - Rattrapage hors ligne (V0.2) : à la réouverture, l'appli rejoue les vraies bougies de la période d'absence et exécute les ordres qui auraient dû l'être. Résumé « Pendant ton absence ».
 
 ## Données réelles utilisées
