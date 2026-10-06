@@ -1,19 +1,21 @@
 // Section « Vie quotidienne » de l'onglet Finances.
 import { SITUATIONS, METIERS, reglesDe } from './config.js';
 import { salaireNet, depenses, EXPERIENCES, loyer, prestations, TRANSPORTS, impotRevenu } from './vie.js';
-import { vieDe, periode } from './jeuvie.js';
+import { vieDe, periode, indice } from './jeuvie.js';
 import { COMPTEUR } from './minage.js';
 import { eur, dateHeure, echapper as e } from './format.js';
+import { maintenant as tJeu } from './horloge.js';
 
 export function sectionVie(ctx) {
   const { partie, app } = ctx;
   const p = partie.profil;
   const v = vieDe(partie);
   const kva = partie.minage ? partie.minage.contrat.kva : (COMPTEUR[p.logement] || 6);
-  const sal0 = salaireNet(p);
-  const aides = prestations(p);
+  const k = indice(partie); // montants ramenés à l'année du jeu (inflation)
+  const sal0 = salaireNet(p) * k;
+  const aides = prestations(p).map(a => ({ ...a, montant: a.montant * k }));
   const sal = sal0 + aides.reduce((s, a) => s + a.montant, 0);
-  const dep = depenses(p, kva, { impot: reglesDe(partie).impots !== 'off' });
+  const dep = depenses(p, kva, { impot: reglesDe(partie).impots !== 'off' }).map(x => ({ ...x, montant: x.montant * k }));
   const total = dep.reduce((s, d) => s + d.montant, 0);
   const jours = periode(partie) / 864e5;
   const c = app.carriere || { situation: p.situation, metier: p.metier || METIERS[0][1][0], experience: p.experience || 'debutant', annee: p.anneeApprentissage || 1 };
@@ -26,7 +28,7 @@ export function sectionVie(ctx) {
       <div class="ligne-kv" style="border-top:1px solid var(--ligne);padding-top:8px"><span>Reste ${jours >= 29 ? 'par mois' : 'par échéance'}</span><span class="num ${sal - total >= 0 ? 'hausse' : 'baisse'}">${(sal - total >= 0 ? '+' : '') + eur(sal - total)}</span></div>
       <div class="ligne-kv" style="font-size:12px"><span>Prochaine échéance</span><span>${e(dateHeure(v.prochaineEcheance))}</span></div>
       ${v.changement ? `<div class="carte info" style="font-size:13px;padding:10px 12px;gap:6px"><span>${e(v.changement.texte)} Le ${e(dateHeure(v.changement.le))}.</span><button class="lien" style="align-self:flex-start" data-action="annuler-carriere">Annuler</button></div>` : ''}
-      <p class="discret" style="font-size:12px">Salaires nets 2026 (milieu de fourchette), SMIC du 1er juin 2026, loyer moyen d'un T2 dans ta ville, alimentation selon l'Insee. Impôt sur le salaire au barème 2026 pour une personne seule. Un découvert coûte 16 % par an d'agios.</p>
+      <p class="discret" style="font-size:12px">${Math.abs(k - 1) > 0.001 ? `Montants de ${new Date(tJeu()).getFullYear()} : ${k > 1 ? '+' : '−'}${Math.round(Math.abs(k - 1) * 1000) / 10} % par rapport à 2026 (inflation). ` : ''}Salaires nets 2026 (milieu de fourchette), SMIC du 1er juin 2026, loyer moyen d'un T2 dans ta ville, alimentation selon l'Insee. Impôt sur le salaire au barème 2026 pour une personne seule. Un découvert coûte 16 % par an d'agios.</p>
     </div>
     <div class="carte" style="gap:10px">
       <div class="carte-titre">Transport</div>
@@ -39,7 +41,7 @@ export function sectionVie(ctx) {
         ${METIERS.map(([sect, ms]) => `<optgroup label="${e(sect)}">${ms.map(m => `<option ${m === c.metier ? 'selected' : ''}>${e(m)}</option>`).join('')}</optgroup>`).join('')}</select></label>` : ''}
       ${c.situation === 'salarie' ? `<div class="segment">${EXPERIENCES.map(([id, nom]) => `<button data-action="carriere-exp" data-v="${id}" aria-pressed="${c.experience === id}">${nom}</button>`).join('')}</div>` : ''}
       ${c.situation === 'alternant' ? `<div class="segment">${[1, 2, 3].map(a => `<button data-action="carriere-annee" data-v="${a}" aria-pressed="${Number(c.annee) === a}">${a}${a === 1 ? 're' : 'e'} année</button>`).join('')}</div>` : ''}
-      <div class="ligne-kv" style="font-size:13px"><span>Salaire net</span><span class="num">${eur(salaireNet({ ...p, situation: c.situation, metier: c.metier, experience: c.experience, anneeApprentissage: c.annee }))}</span></div>
+      <div class="ligne-kv" style="font-size:13px"><span>Salaire net</span><span class="num">${eur(salaireNet({ ...p, situation: c.situation, metier: c.metier, experience: c.experience, anneeApprentissage: c.annee }) * k)}</span></div>
       <button class="bouton secondaire petit" data-action="carriere-valider">${c.situation === 'sans' ? 'Démissionner (préavis d\'un mois)' : 'Changer (début dans un mois)'}</button>
     </div></section>`;
 }

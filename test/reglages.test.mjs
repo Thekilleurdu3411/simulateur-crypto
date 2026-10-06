@@ -4,13 +4,13 @@ import { nettoyerReglages, reglesDe, DIFFICULTES } from '../js/config.js';
 import { mode } from '../js/jeufisc.js';
 
 test('réglages identiques à la difficulté : partie non personnalisée', () => {
-  assert.deepEqual(nettoyerReglages('expert', { temps: 2, minage: 1.25, impots: 'auto' }), {});
+  assert.deepEqual(nettoyerReglages('expert', { vitesseMax: 1440, minage: 1.25, impots: 'auto' }), {});
   assert.equal(reglesDe({ difficulte: 'expert', reglages: {} }), DIFFICULTES.expert);
 });
 
 test('réglages bornés et validés', () => {
-  const r = nettoyerReglages('realite', { temps: 500, elec: -1, levierMax: 33, bruit: 'off', aides: 1 });
-  assert.deepEqual(r, { temps: 20, elec: 0, bruit: 'off', aides: true });
+  const r = nettoyerReglages('realite', { vitesseMax: 1440, elec: -1, levierMax: 33, bruit: 'off', aides: 1, inconnu: 3 });
+  assert.deepEqual(r, { vitesseMax: 1440, elec: 0, bruit: 'off', aides: true });
 });
 
 test('partie personnalisée : règles fusionnées et impôts suivis', () => {

@@ -4,6 +4,11 @@ import { avancerVie, MOIS, trouverMetier } from './vie.js';
 import { COMPTEUR } from './minage.js';
 import { journal } from './state.js';
 import { maintenant as tJeu } from './horloge.js';
+import { indiceVie } from './economie.js';
+
+export const graine = partie => (partie.simulation ? partie.simulation.seed : 0);
+/** Indice des prix de la vie à une date (1 = 2026). */
+export function indice(partie, t = tJeu()) { return indiceVie(t, graine(partie)); }
 
 export function periode(partie) { return MOIS / reglesDe(partie).temps; }
 
@@ -16,7 +21,7 @@ export function vieDe(partie) {
 export function avancerViePartie(partie, maintenant = tJeu()) {
   const v = vieDe(partie);
   const kva = partie.minage ? partie.minage.contrat.kva : (COMPTEUR[partie.profil.logement] || 6);
-  const evts = avancerVie(v, partie.banque, partie.profil, v.dernierCalcul, maintenant, periode(partie), kva, { impot: reglesDe(partie).impots !== 'off' });
+  const evts = avancerVie(v, partie.banque, partie.profil, v.dernierCalcul, maintenant, periode(partie), kva, { impot: reglesDe(partie).impots !== 'off', indice: t => indice(partie, t) });
   v.dernierCalcul = maintenant;
   for (const e of evts) partie.historique.unshift({ t: e.t, type: 'vie', texte: e.texte });
   if (evts.length) partie.historique.sort((a, b) => b.t - a.t);

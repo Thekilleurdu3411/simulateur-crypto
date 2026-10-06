@@ -334,11 +334,13 @@ export function avancerVie(vie, banque, profil, t0, t1, periode, kva, options = 
       evts.push({ t: vie.changement.le, texte: vie.changement.texte });
       vie.changement = null;
     }
-    const s = Math.round(salaireNet(profil) * 100) / 100;
+    // Montants de 2026 ramenés à l'année de l'échéance (inflation, revalorisations du 1er janvier)
+    const k = options.indice ? options.indice(e) : 1;
+    const s = Math.round(salaireNet(profil) * k * 100) / 100;
     if (s > 0) { banque.solde += s; evts.push({ t: e, texte: `Salaire reçu : ${s.toFixed(2).replace('.', ',')} €` }); }
-    for (const p of prestations(profil)) { banque.solde += p.montant; evts.push({ t: e, texte: `${p.nom} versé(e) par la CAF : ${p.montant.toFixed(2).replace('.', ',')} €` }); }
+    for (const p of prestations(profil)) { const m = Math.round(p.montant * k * 100) / 100; banque.solde += m; evts.push({ t: e, texte: `${p.nom} versé(e) par la CAF : ${m.toFixed(2).replace('.', ',')} €` }); }
     const dep = depenses(profil, kva, options);
-    const total = Math.round(dep.reduce((x, d) => x + d.montant, 0) * 100) / 100;
+    const total = Math.round(dep.reduce((x, d) => x + d.montant, 0) * k * 100) / 100;
     banque.solde -= total;
     evts.push({ t: e, texte: `Dépenses du mois (loyer, courses, forfaits, loisirs${dep.some(d => d.nom.startsWith('Impôt')) ? ', impôt' : ''}) : ${total.toFixed(2).replace('.', ',')} €` + (banque.solde < 0 ? ' · compte à découvert' : '') });
     t = e;

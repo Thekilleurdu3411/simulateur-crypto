@@ -37,7 +37,6 @@ export function valeurFutures(k, arg, ctx) {
 export function ongletPerp(ctx, live) {
   const { partie, app, D } = ctx;
   const d = reglesDe(partie);
-  if (enRejeu()) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Perpétuels indisponibles en rejeu pour l'instant : le carnet et le prix de marque passés ne sont pas encore rejoués.</div>`;
   if (!d.levierMax) return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Les dérivés avec levier sont désactivés dans ta partie (Découverte, ou levier à zéro dans les réglages avancés).</div>`;
   if (partie.plateforme.statut !== 'ouvert') return `<div class="carte info" style="font-size:14px;color:var(--texte-2)">Ouvre d'abord un compte sur la plateforme (onglet Finances).</div>`;
   const f = futuresDe(partie);
@@ -75,7 +74,7 @@ export function ongletPerp(ctx, live) {
       <label class="champ">Marge engagée (USDT)<input id="f-perp-marge" class="num" inputmode="decimal" placeholder="0,00" value="${e(p.marge)}" data-input="perp-marge" autocomplete="off"></label>
       <div class="num" style="font-size:12px;color:var(--texte-2);min-height:18px">${live('festim', ctx)}</div>
       <button class="bouton ${p.sens === 'long' ? 'achat' : 'vente'}" data-action="perp-ouvrir" ${app.enCours ? 'disabled' : ''}>${app.enCours ? 'Envoi…' : 'Ouvrir le ' + (p.sens === 'long' ? 'long' : 'short') + ' ×' + Math.min(p.levier, lmax)}</button>
-      <p class="discret" style="font-size:12px">Marge isolée. Frais 0,05 % à l'ouverture et à la fermeture. Financement toutes les 8 h (0 h, 8 h, 16 h UTC) au taux réel.${d.bruit === 'alertes' ? ' Ta difficulté prévient à 80 % de marge perdue et ne liquide pas pendant ton absence.' : ' La liquidation peut arriver à tout moment, même appli fermée.'}</p>
+      <p class="discret" style="font-size:12px">Marge isolée. Frais 0,05 % à l'ouverture et à la fermeture. Financement toutes les 8 h (0 h, 8 h, 16 h UTC) ${enRejeu() ? 'autour de 0,01 % (prix de marque reconstitué à partir du prix au comptant)' : 'au taux réel'}.${d.bruit === 'alertes' ? ' Ta difficulté prévient à 80 % de marge perdue et ne liquide pas pendant ton absence.' : ' La liquidation peut arriver à tout moment, même appli fermée.'}</p>
     </section>
     ${f.positions.length ? `<section class="section"><div class="section-titre"><h2>Positions ouvertes</h2></div>
       ${f.positions.map(pos => `<article class="carte" style="gap:8px">

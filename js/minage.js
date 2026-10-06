@@ -13,6 +13,14 @@ export const CATALOGUE = [
   { id: 's21xphyd', sortie: '2024-10-01', nom: 'Antminer S21 XP Hydro', th: 473, w: 5676, etat: 'neuf', prixUSD: 6899, refroidissement: 'hydro', phase: 'mono' },
   { id: 's21xpphyd', sortie: '2025-04-01', nom: 'Antminer S21 XP+ Hyd', th: 500, w: 5500, etat: 'neuf', prixUSD: 9500, refroidissement: 'hydro', phase: 'tri' },
   { id: 's23hyd', sortie: '2025-11-01', nom: 'Antminer S23 Hydro', th: 580, w: 5510, etat: 'neuf', prixUSD: 14299, refroidissement: 'hydro', phase: 'tri' },
+  // Générations futures (fictives) : n'apparaissent que dans le futur simulé, environ tous les 18 mois,
+  // avec 15 à 20 % d'efficacité en plus. Prix en dollars de 2026, ajustés comme les autres à la rentabilité.
+  { id: 's25', sortie: '2027-06-01', fictive: true, nom: 'Antminer S25 (fictive)', th: 330, w: 3600, etat: 'neuf', prixUSD: 4200, refroidissement: 'air', phase: 'mono' },
+  { id: 's25hyd', sortie: '2027-09-01', fictive: true, nom: 'Antminer S25 Hydro (fictive)', th: 650, w: 6000, etat: 'neuf', prixUSD: 13000, refroidissement: 'hydro', phase: 'tri' },
+  { id: 's27', sortie: '2029-03-01', fictive: true, nom: 'Antminer S27 (fictive)', th: 420, w: 3700, etat: 'neuf', prixUSD: 4800, refroidissement: 'air', phase: 'mono' },
+  { id: 's27hyd', sortie: '2029-06-01', fictive: true, nom: 'Antminer S27 Hydro (fictive)', th: 800, w: 6000, etat: 'neuf', prixUSD: 15000, refroidissement: 'hydro', phase: 'tri' },
+  { id: 's29', sortie: '2031-01-01', fictive: true, nom: 'Antminer S29 (fictive)', th: 520, w: 3700, etat: 'neuf', prixUSD: 5200, refroidissement: 'air', phase: 'mono' },
+  { id: 's31', sortie: '2033-01-01', fictive: true, nom: 'Antminer S31 (fictive)', th: 640, w: 3700, etat: 'neuf', prixUSD: 5600, refroidissement: 'air', phase: 'mono' },
   // ASIC Scrypt : minage fusionné Litecoin + Dogecoin (Kryptex, octobre 2026)
   { id: 'l9', sortie: '2024-03-01', nom: 'Antminer L9', th: 0, w: 3260, etat: 'neuf', prixUSD: 6500, refroidissement: 'air', phase: 'mono', production: [{ coin: 'LTC', h: 16e9 }, { coin: 'DOGE', h: 16e9 }] }
 ];

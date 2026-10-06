@@ -14,7 +14,6 @@ export function futuresDe(partie) {
 
 // Conversion euros ↔ USDT au cours réel EUR/USDT, 0,1 % de frais.
 export function transferer(partie, sens, montant, eurUsd) {
-  if (enRejeu()) return { erreur: 'Perpétuels indisponibles en rejeu.' };
   const f = futuresDe(partie), pl = partie.plateforme;
   if (!eurUsd) return { erreur: 'Cours EUR/USDT indisponible pour le moment.' };
   if (!(montant > 0)) return { erreur: 'Indique un montant.' };
@@ -35,7 +34,6 @@ export function transferer(partie, sens, montant, eurUsd) {
 }
 
 export function ouvrirPosition(partie, p, marche, regles) {
-  if (enRejeu()) return { erreur: 'Perpétuels indisponibles en rejeu.' };
   const f = futuresDe(partie);
   const d = reglesDe(partie);
   if (!d.levierMax) return { erreur: 'Les dérivés sont désactivés dans ta partie.' };
@@ -137,4 +135,15 @@ export function valeurDerivesEUR(partie, marques, eurUsd) {
     usdt += Math.max(0, pos.marge + (m ? pnl(pos, m.p) : 0));
   }
   return usdt / eurUsd;
+}
+
+/** Rejeu et simulation : liquidation possible au plus haut ou au plus bas d'une bougie au comptant. */
+export function surBougieSpot(partie, base, haut, bas, t, eurUsd) {
+  const f = partie.futures;
+  if (!f || !eurUsd) return [];
+  const evts = [];
+  for (const pos of f.positions.filter(x => contrat(x.s).base === base)) {
+    if (estLiquidee(pos, bas * eurUsd, haut * eurUsd)) evts.push(liquider(partie, pos, pos.liquidation, t));
+  }
+  return evts;
 }

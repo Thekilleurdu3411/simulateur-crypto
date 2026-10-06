@@ -1,6 +1,33 @@
-// Données réelles des contrats perpétuels (Binance Futures, accès public sans compte).
-import { CONTRATS } from './futures.js';
-import { enRejeu } from './horloge.js';
+// Données des contrats perpétuels : réelles en direct (Binance Futures, accès public sans compte),
+// reconstituées à partir du prix au comptant en rejeu et dans le futur simulé.
+import { CONTRATS, prochainFinancement } from './futures.js';
+import { enRejeu, maintenant as tJeu } from './horloge.js';
+import * as M from './market.js';
+import * as D from './donnees.js';
+
+// Rejeu et simulation : pas de prix de marque public passé ni futur. Prix de marque = prix au comptant
+// converti en USDT ; financement autour de 0,01 % toutes les 8 h (taux de base de la plateforme).
+const REGLES_DEFAUT = { BTCUSDT: { pas: '0.001', minNotional: 100 }, ETHUSDT: { pas: '0.001', minNotional: 20 }, SOLUSDT: { pas: '1', minNotional: 5 } };
+export function tauxReconstitue(T) {
+  let a = Math.floor(T / 36e5) | 0;
+  a = a + 0x6D2B79F5 | 0; let x = Math.imul(a ^ a >>> 15, 1 | a); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x;
+  const u = ((x ^ x >>> 14) >>> 0) / 4294967296;
+  return Math.round((0.0001 + 0.00012 * (u - 0.35)) * 1e6) / 1e6;
+}
+function marqueReconstituee(c, t) {
+  const p = M.prixDeBase(c.base), fx = D.etat.eurUsd;
+  if (!p || !fx) return null;
+  const T = prochainFinancement(t);
+  return { p: p * fx, r: tauxReconstitue(T), T, t };
+}
+let boucle = null;
+function demarrerReconstitue() {
+  clearInterval(boucle);
+  const pas = () => { const t = tJeu(); for (const c of CONTRATS) { const m = marqueReconstituee(c, t); if (m) { etat.marques[c.s] = m; notifier('marque', c.s); } } etat.statut = 'reconstitue'; };
+  pas();
+  boucle = setInterval(pas, 1000);
+}
+export function changerMode() { clearInterval(boucle); boucle = null; actif = false; etat.marques = {}; if (ws) { const w = ws; ws = null; w.onclose = null; try { w.close(); } catch (e) {} } }
 
 const FAPI = 'https://fapi.binance.com';
 const WS = 'wss://fstream.binance.com/market/stream?streams=';
@@ -46,21 +73,27 @@ function planifier() { if (actif) setTimeout(connecter, Math.min(30000, 1000 * 2
 
 // Ne se connecte qu'à la première visite des perpétuels (pas de flux inutile).
 export function demarrer() {
-  if (enRejeu()) return;
   if (actif) return;
   actif = true;
+  if (enRejeu()) return demarrerReconstitue();
   chargerMarques().catch(() => {});
   connecter();
 }
 
 export async function meilleursPrix(s) {
+  if (enRejeu()) {
+    const m = etat.marques[s] || marqueReconstituee(CONTRATS.find(c => c.s === s), tJeu());
+    if (!m) throw new Error('Prix indisponible');
+    return { bid: m.p * (1 - 0.00005), ask: m.p * (1 + 0.00005) };
+  }
   const d = await json('/fapi/v1/ticker/bookTicker?symbol=' + s);
   return { bid: +d.bidPrice, ask: +d.askPrice };
 }
 
 export async function regles(s) {
   if (etat.regles[s]) return etat.regles[s];
-  const d = await json('/fapi/v1/exchangeInfo');
+  let d;
+  try { d = await json('/fapi/v1/exchangeInfo'); } catch (e) { if (REGLES_DEFAUT[s]) return REGLES_DEFAUT[s]; throw e; }
   for (const sym of d.symbols) {
     if (!CONTRATS.some(c => c.s === sym.symbol)) continue;
     const lot = sym.filters.find(f => f.filterType === 'MARKET_LOT_SIZE') || sym.filters.find(f => f.filterType === 'LOT_SIZE') || {};
@@ -72,6 +105,11 @@ export async function regles(s) {
 
 // Historique pour le rattrapage hors ligne.
 export async function bougiesMarque(s, debut, fin) {
+  if (enRejeu()) {
+    const c = CONTRATS.find(x => x.s === s), fx = D.etat.eurUsd || 1.17;
+    const b = await M.bougiesPeriode(c.base + 'EUR', fin - debut <= 3 * 864e5 ? '1m' : '1h', debut, fin);
+    return b.map(k => ({ t: k.t, h: k.h * fx, l: k.l * fx, c: k.c * fx }));
+  }
   const tout = [];
   const intervalle = fin - debut <= 3 * 864e5 ? '1m' : '1h';
   let depuis = debut;
@@ -85,6 +123,15 @@ export async function bougiesMarque(s, debut, fin) {
   return tout;
 }
 export async function historiqueFinancement(s, debut, fin) {
+  if (enRejeu()) {
+    const b = await bougiesMarque(s, debut, fin);
+    const r = [];
+    for (let T = prochainFinancement(debut); T <= fin; T = prochainFinancement(T)) {
+      const k = b.filter(x => x.t <= T).pop();
+      if (k) r.push({ t: T, taux: tauxReconstitue(T), marque: k.c });
+    }
+    return r;
+  }
   const d = await json(`/fapi/v1/fundingRate?symbol=${s}&startTime=${Math.floor(debut)}&endTime=${Math.floor(fin)}&limit=1000`);
   return d.map(x => ({ t: +x.fundingTime, taux: +x.fundingRate, marque: +x.markPrice }));
 }

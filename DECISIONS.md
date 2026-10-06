@@ -239,3 +239,23 @@ Tout peut être changé : il suffit de le demander.
 | Signature | Clé de débogage fixe enregistrée dans le dépôt, pour que les mises à jour de l'APK s'installent par-dessus sans désinstaller | Appli personnelle ; pour le Play Store, il faudrait une vraie clé privée gardée secrète. |
 | Natif | Notifications Android natives, export de la sauvegarde par le partage du téléphone | Le navigateur intégré d'une appli ne gère ni les notifications web ni les téléchargements. |
 | iPhone | Pas d'appli : il faudrait un compte développeur Apple (99 $ par an) et un Mac | Valentin est sur Android. |
+
+## V0.15 — Temps accéléré et futur simulé
+
+| Sujet | Décision | Raison |
+| --- | --- | --- |
+| Temps accéléré | Découverte, Investisseur et Expert : vitesse réglable en jeu (pause, ×1, ×10, 1 min = 1 h, 1 min = 6 h, 1 min = 1 jour, 1 min = 1 semaine). Maximum : 1 semaine par minute (Découverte, Investisseur), 1 jour par minute (Expert). Réalité reste en temps réel | Choix de Valentin (vitesse contrôlable en jeu). Le maximum est réglable dans les réglages avancés. |
+| Appli quittée | Le temps s'arrête et reprend au retour, à la même vitesse | Choix de Valentin. |
+| Départ | Date passée au choix (vrais marchés rejoués à la vitesse choisie) ou aujourd'hui | Choix de Valentin. |
+| Rejeu rapide | Bougies d'une minute jusqu'à 1 min = 1 h, de 15 minutes jusqu'à 1 min = 1 jour, d'une heure au-delà ; les ordres en attente sont vérifiés sur chacune | Assez de détail sans saturer le réseau. |
+| Au-delà d'aujourd'hui | Marché simulé, pas de 15 minutes, reproductible (graine propre à la partie) : phases haussières, baissières et latérales sur des mois, volatilité qui s'auto-entretient, krachs, corrélation au bitcoin (bêta) et part propre de chaque crypto | Choix de Valentin : réaliste et aléatoire. Volatilité annuelle d'environ 55 % pour le bitcoin, 70 à 110 % pour les autres. Paramètres **à valider** en jouant. |
+| Tendance de fond | Neutre en moyenne (krachs et actualités compensés) ; sur 4 ans, le bitcoin peut aussi bien finir à 15 000 € qu'à 2 M€, médiane autour de ×2, avec des chutes de 50 à 90 % en route | Pas de hausse garantie : comme en vrai. |
+| Actualités | Environ 12 par an : piratages, régulation, taux des banques centrales, ETF, pannes, mèmes, faillites, adoption… avec leur effet sur les prix ; halving du Bitcoin tous les 210 000 blocs, suivi plus souvent d'une phase haussière | Choix de Valentin. Visibles sur l'accueil et dans le journal, avec notification. |
+| Réseau Bitcoin simulé | Puissance qui suit le cours avec retard (+25 % par an de fond), difficulté ajustée tous les 2 016 blocs, frais qui varient, récompense divisée par deux aux halvings | Choix de Valentin (minage qui évolue). |
+| Nouvelles machines | Générations fictives (S25, S27, S29, S31, versions hydro) qui sortent tous les 18 mois environ dans le futur simulé, 15 à 20 % plus efficaces ; prix ajustés à la rentabilité du minage | Noms marqués « fictive ». |
+| Inflation et vie | Tous les montants de la vie (salaires, SMIC, aides, loyers, dépenses) en valeurs de 2026, ramenés à la date du jeu chaque 1er janvier : inflation réelle de l'Insee dans le passé (2025 : +0,9 %, 2024 : +2,0 %…), inflation tirée au hasard ensuite (2 % en moyenne, entre −0,5 et 6 %) | Choix de Valentin (économie qui évolue) et décision « valeurs de l'époque » en rejeu. Approximation : le SMIC réel n'a pas suivi exactement l'inflation. |
+| Électricité dans le temps | Vraies révisions du Tarif Bleu dans le passé (+15 % en février 2023, +10 % en août 2023, +8,6 % en février 2024, −15 % en février 2025…), révisions tirées au hasard chaque 1er février et 1er août ensuite | Valeurs de 2018 à 2022 et de 2025-2026 **à vérifier**. |
+| Météo et Tempo futurs | Ceux des mêmes jours une année passée | Pas de prévisions possibles si loin. |
+| Perpétuels en rejeu et en simulation | Prix de marque reconstitué à partir du prix au comptant converti en USDT, financement autour de 0,01 % toutes les 8 h, liquidation au plus haut ou au plus bas de chaque bougie | Plus de données publiques du marché à terme dans ces cas. |
+| Rigs et Antminer L9 en temps accéléré | Pas encore disponibles hors direct | Pas d'historique ni de modèle pour ces réseaux pour l'instant. |
+| Rejeu avant 2020 | Pas encore fait (décision validée) | Prochaine étape. |

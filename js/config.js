@@ -1,7 +1,7 @@
 // Données fixes du jeu : difficultés, cryptos, profils.
 // Les prix ne sont jamais ici : ils viennent toujours du marché réel.
 
-export const VERSION = '0.14.0';
+export const VERSION = '0.15.0';
 
 // Point d'accès public de Binance réservé aux données de marché (sans compte, sans clé).
 export const API_REST = 'https://data-api.binance.vision';
@@ -15,32 +15,32 @@ export const DIFFICULTES = {
   decouverte: {
     id: 'decouverte', nom: 'Découverte', ligne: 'Pour apprendre sans stress',
     capital: 10000, temps: 10, minage: 4, elec: 0.5, score: 0.25,
-    frais: 0, execution: 'milieu', aides: true, pannes: 0.1, bruit: 'off', protectionAbsence: true, levierMax: 0, liquidationAbsence: false, impots: 'off',
-    effets: ['Temps hors marché ×10, minage ×4', 'Électricité −50 %, ni frais ni impôts', 'Pannes très rares', 'Aucune perte pendant ton absence']
+    frais: 0, execution: 'milieu', aides: true, pannes: 0.1, bruit: 'off', protectionAbsence: true, levierMax: 0, liquidationAbsence: false, impots: 'off', vitesseMax: 10080,
+    effets: ['Temps accéléré à volonté (jusqu\'à 1 min = 1 semaine), minage ×4', 'Électricité −50 %, ni frais ni impôts', 'Pannes très rares', 'Aucune perte pendant ton absence']
   },
   investisseur: {
     id: 'investisseur', nom: 'Investisseur', ligne: 'Réaliste, avec un coup de pouce',
     capital: 5000, temps: 4, minage: 2, elec: 0.75, score: 0.5,
-    frais: 0.0005, execution: 'meilleur', aides: true, pannes: 0.5, bruit: 'alertes', protectionAbsence: false, levierMax: 5, liquidationAbsence: false, impots: 'preleve',
-    effets: ['Temps ×4, minage ×2', 'Électricité −25 %, frais divisés par deux', 'Flat tax prélevée automatiquement', 'Levier ×5 max, alerte avant liquidation']
+    frais: 0.0005, execution: 'meilleur', aides: true, pannes: 0.5, bruit: 'alertes', protectionAbsence: false, levierMax: 5, liquidationAbsence: false, impots: 'preleve', vitesseMax: 10080,
+    effets: ['Temps accéléré (jusqu\'à 1 min = 1 semaine), minage ×2', 'Électricité −25 %, frais divisés par deux', 'Flat tax prélevée automatiquement', 'Levier ×5 max, alerte avant liquidation']
   },
   expert: {
     id: 'expert', nom: 'Expert', ligne: 'Presque tout est réel',
     capital: 2000, temps: 2, minage: 1.25, elec: 1, score: 0.75,
-    frais: 0.001, execution: 'carnet', aides: true, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'auto',
-    effets: ['Temps ×2, minage ×1,25', 'Électricité, frais et pannes réels', 'Impôts calculés pour toi', 'Une seule sauvegarde']
+    frais: 0.001, execution: 'carnet', aides: true, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'auto', vitesseMax: 1440,
+    effets: ['Temps accéléré (jusqu\'à 1 min = 1 jour), minage ×1,25', 'Électricité, frais et pannes réels', 'Impôts calculés pour toi', 'Une seule sauvegarde']
   },
   realite: {
     id: 'realite', nom: 'Réalité', ligne: 'La réalité absolue, sans aide',
     capital: 1000, temps: 1, minage: 1, elec: 1, score: 1,
-    frais: 0.001, execution: 'carnet', aides: false, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'manuel',
-    effets: ['Tout est réel, aucun coup de pouce', 'Aucune estimation de rentabilité', 'Déclaration fiscale à remplir toi-même', 'Une sauvegarde, aucun retour arrière']
+    frais: 0.001, execution: 'carnet', aides: false, pannes: 1, bruit: 'reel', protectionAbsence: false, levierMax: 125, liquidationAbsence: true, impots: 'manuel', vitesseMax: 1,
+    effets: ['Temps réel, marché en direct, aucun coup de pouce', 'Aucune estimation de rentabilité', 'Déclaration fiscale à remplir toi-même', 'Une sauvegarde, aucun retour arrière']
   }
 };
 
 // Réglages avancés : tout multiplicateur est libre ; la moindre modification rend la partie « Personnalisée ».
 export const REGLAGES = [
-  { cle: 'temps', nom: 'Vitesse du temps hors marché', aide: 'Accélère la vie, les livraisons, les factures et les échéances. Le marché reste en temps réel.', type: 'nombre', min: 1, max: 20, pas: 1, unite: '×' },
+  { cle: 'vitesseMax', nom: 'Vitesse maximale du temps', aide: 'Au-delà du temps réel, tu règles la vitesse en jeu (pause comprise) et le marché passe en rejeu accéléré puis en simulation au-delà d\'aujourd\'hui.', type: 'choix', options: [[1, 'Temps réel'], [60, '1 min = 1 h'], [360, '1 min = 6 h'], [1440, '1 min = 1 jour'], [10080, '1 min = 1 sem.']] },
   { cle: 'minage', nom: 'Multiplicateur de minage', aide: 'Multiplie les gains de toutes tes machines.', type: 'nombre', min: 0.25, max: 10, pas: 0.25, unite: '×' },
   { cle: 'elec', nom: "Prix de l'électricité", aide: 'En pourcentage du tarif réel.', type: 'nombre', min: 0, max: 200, pas: 5, unite: '%', echelle: 100 },
   { cle: 'frais', nom: 'Frais de trading', aide: 'Commission par ordre au comptant (réel : 0,10 %).', type: 'nombre', min: 0, max: 0.5, pas: 0.01, unite: '%', echelle: 100 },
@@ -72,8 +72,9 @@ export function nettoyerReglages(base, r) {
 export function reglesDe(partie) {
   const base = DIFFICULTES[partie.difficulte] || DIFFICULTES.expert;
   const r = partie.reglages;
-  if (!r || !Object.keys(r).length) return base;
-  return { ...base, ...r, nom: 'Personnalisée', base: base.nom, personnalisee: true };
+  const acc = partie.horloge ? { temps: 1 } : {}; // temps accéléré : les durées restent réelles
+  if (!r || !Object.keys(r).length) return partie.horloge ? { ...base, ...acc } : base;
+  return { ...base, ...r, ...acc, nom: 'Personnalisée', base: base.nom, personnalisee: true };
 }
 
 

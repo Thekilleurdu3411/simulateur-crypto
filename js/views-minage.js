@@ -2,8 +2,9 @@
 import { HEBERGEURS, ABONNEMENTS, CHANGEMENT_PUISSANCE, ENVOI, FRAIS_ANNEXES_USD, hebergeur, prixHebergeurEUR } from './minage.js';
 import { CATALOGUE, POOLS, TARIFS, LIVRAISON, MODES, VENTILATION, modele, spec, pool, puissanceDispo, prixMachineEUR, estimationJour, btcParSeconde, facteurChaleur, disponible, marcheMachines } from './minage.js';
 import { enRejeu } from './horloge.js';
+import { indiceElec } from './economie.js';
 import { DIFFICULTES, reglesDe } from './config.js';
-import { minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
+import { multElec, minageDe, kwEnMarche, thEnMarche, devisReparation, valeurReventeEUR } from './jeuminage.js';
 import { CARTES, COINS_GPU, RIG, FRAIS_POOL_ALT, calculerRig, coinsParSeconde, prixAltEUR } from './altcoins.js';
 import { eur, prix, qte, dateHeure, echapper as e } from './format.js';
 import { maintenant as tJeu } from './horloge.js';
@@ -31,7 +32,7 @@ function estimer(md, ctx, mn) {
     if (alt && p) gain += coinsParSeconde(pr.h, alt.coins[pr.coin], FRAIS_POOL_ALT, d.minage) * 86400 * p;
   }
   const prixKwh = mn.contrat.type === 'tempo' ? 0.155 : TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6];
-  const cout = md.w / 1000 * 24 * prixKwh * d.elec;
+  const cout = md.w / 1000 * 24 * prixKwh * multElec(partie);
   return { eur: gain, cout, net: gain - cout };
 }
 function ligneEstimation(est) {
@@ -68,6 +69,8 @@ function parc(ctx, mn, live) {
   const parents = partie.profil.logement === 'parents';
   const usage = dispo ? Math.min(100, kw / dispo * 100) : 0;
   const couleurJ = mn.contrat.type === 'tempo' ? ctx.couleurAujourdhui : null;
+  const ie = indiceElec(tJeu(), partie.simulation ? partie.simulation.seed : 0);
+  const kwh = v => (Math.round(v * ie * 10000) / 10000).toString().replace('.', ',');
   return `${parents ? `<div class="carte alerte" style="font-size:13px">Chez tes parents, pas question d'un ASIC : bruit, chaleur et compteur partagé. Pour miner, fais livrer tes machines chez un hébergeur (choix de la livraison dans la boutique).</div>` : ''}
     <section class="carte">
       <div class="ligne-kv"><span class="carte-titre" style="color:var(--texte)">${e(LOGEMENT[partie.profil.logement])}</span><span class="badge neutre">Compteur ${mn.contrat.kva} kVA</span></div>
@@ -86,7 +89,7 @@ function parc(ctx, mn, live) {
       </div>
       ${Object.entries(mn.soldesAlt || {}).filter(([, q]) => q > 0).map(([tag, q]) => `<div class="ligne-kv" style="font-size:13px"><span>En attente au pool</span><span class="num">${q.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${tag}</span></div>`).join('')}
       ${d.aides && th ? `<div class="ligne-kv" style="font-size:13px"><span>Gains attendus</span><span class="num">${qte(gainJour)} BTC/jour${prixBTC ? ' ≈ ' + eur(gainJour * prixBTC) : ''}</span></div>
-        <div class="ligne-kv" style="font-size:13px"><span>Électricité</span><span class="num">≈ ${eur(kw * 24 * (mn.contrat.type === 'tempo' ? 0.155 : TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6]) * d.elec)}/jour</span></div>` : ''}
+        <div class="ligne-kv" style="font-size:13px"><span>Électricité</span><span class="num">≈ ${eur(kw * 24 * (mn.contrat.type === 'tempo' ? 0.155 : TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6]) * multElec(partie))}/jour</span></div>` : ''}
       <p class="discret" style="font-size:12px">Versement par ${e(p.nom)} chaque nuit à minuit UTC dès ${String(p.min).replace('.', ',')} BTC. Facture prélevée sur ta banque le ${e(dateHeure(mn.prochaineFacture).slice(0, 5))}.</p>
     </section>
     <section class="section">
@@ -109,14 +112,14 @@ function parc(ctx, mn, live) {
           <button data-action="contrat" data-v="tempo" aria-pressed="${mn.contrat.type === 'tempo'}">Tempo</button>
         </div>
         ${mn.contrat.type === 'base'
-          ? `<div class="ligne-kv"><span>Prix du kWh</span><span class="num">${String(TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6]).replace('.', ',')} €</span></div>`
+          ? `<div class="ligne-kv"><span>Prix du kWh</span><span class="num">${kwh(TARIFS.base[mn.contrat.kva >= 9 ? 9 : 6])} €</span></div>`
           : `<div class="ligne-kv"><span>Aujourd'hui</span>${couleurJ ? `<span class="${COULEUR_CLS[couleurJ]}">${COULEUR_TXT[couleurJ]}</span>` : '<span class="discret">Couleur inconnue</span>'}</div>
              ${ctx.couleurDemain ? `<div class="ligne-kv"><span>Demain</span><span class="${COULEUR_CLS[ctx.couleurDemain]}">${COULEUR_TXT[ctx.couleurDemain]}</span></div>` : ''}
-             <div class="ligne-kv" style="font-size:13px"><span>Bleu HP / HC</span><span class="num">${TARIFS.tempo.bleu.map(v => String(v).replace('.', ',')).join(' / ')} €</span></div>
-             <div class="ligne-kv" style="font-size:13px"><span>Blanc HP / HC</span><span class="num">${TARIFS.tempo.blanc.map(v => String(v).replace('.', ',')).join(' / ')} €</span></div>
-             <div class="ligne-kv" style="font-size:13px"><span>Rouge HP / HC</span><span class="num">${TARIFS.tempo.rouge.map(v => String(v).replace('.', ',')).join(' / ')} €</span></div>
+             <div class="ligne-kv" style="font-size:13px"><span>Bleu HP / HC</span><span class="num">${TARIFS.tempo.bleu.map(kwh).join(' / ')} €</span></div>
+             <div class="ligne-kv" style="font-size:13px"><span>Blanc HP / HC</span><span class="num">${TARIFS.tempo.blanc.map(kwh).join(' / ')} €</span></div>
+             <div class="ligne-kv" style="font-size:13px"><span>Rouge HP / HC</span><span class="num">${TARIFS.tempo.rouge.map(kwh).join(' / ')} €</span></div>
              <p class="discret" style="font-size:12px">Heures creuses de 22 h à 6 h. Couleurs du vrai calendrier Tempo ; si elle est inconnue, le prix Base s'applique.</p>`}
-        <p class="discret" style="font-size:12px">Tarif Bleu EDF au 1er août 2026${d.elec !== 1 ? ` · ta partie applique ${d.elec < 1 ? '−' : '+'}${Math.round(Math.abs(1 - d.elec) * 100)} %` : ''}.</p>
+        <p class="discret" style="font-size:12px">Tarif Bleu EDF ${Math.abs(ie - 1) < 0.001 ? 'au 1er août 2026' : `à la date du jeu (${ie > 1 ? '+' : '−'}${Math.round(Math.abs(ie - 1) * 1000) / 10} % par rapport au 1er août 2026)`}${d.elec !== 1 ? ` · ta partie applique ${d.elec < 1 ? '−' : '+'}${Math.round(Math.abs(1 - d.elec) * 100)} %` : ''}.</p>
       </div>
     </section>`;
 }

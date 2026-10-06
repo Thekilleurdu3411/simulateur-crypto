@@ -180,3 +180,7 @@ input[type=range] { width: 100%; accent-color: var(--ambre); min-height: 32px; }
   .toast { animation: monte 0.2s ease-out; }
   @keyframes monte { from { transform: translate(-50%, 12px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 }
+
+.barre-vitesse { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 61px); z-index: 4; display: flex; gap: 6px; overflow-x: auto; padding: 8px 20px; background: rgba(11, 14, 17, 0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--ligne); scrollbar-width: none; }
+.barre-vitesse::-webkit-scrollbar { display: none; }
+.barre-vitesse .puce { flex-shrink: 0; min-height: 32px; font-size: 12px; white-space: nowrap; }

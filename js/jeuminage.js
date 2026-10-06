@@ -2,6 +2,9 @@
 import { HEBERGEURS, ENVOI, CHANGEMENT_PUISSANCE, hebergeur, prixHebergeurEUR, supplementAbonnementParSeconde } from './minage.js';
 import { CATALOGUE, COMPTEUR, LIVRAISON, MODES, GARANTIE_JOURS, ENVOI_SAV, VENTILATION, modele, spec, pool, avancer, puissanceDispo, prixMachineEUR, jourTempo, infosPanne, valeurReventeUSD, disponible } from './minage.js';
 import { enRejeu } from './horloge.js';
+import { indiceElec } from './economie.js';
+/** Multiplicateur du prix de l'électricité : difficulté × évolution du tarif à la date du jeu. */
+export function multElec(partie, t = tJeu()) { return reglesDe(partie).elec * indiceElec(t, partie.simulation ? partie.simulation.seed : 0); }
 import { DIFFICULTES, reglesDe } from './config.js';
 import { journal } from './state.js';
 import { noterMinage } from './jeufisc.js';
@@ -95,7 +98,7 @@ export function avancerPartie(partie, maintenant, { reseau, couleurs, prixBTC, p
   const d = reglesDe(partie);
   const pl = partie.plateforme;
   const evts = avancer(mn, mn.dernierCalcul, maintenant, {
-    reseau: r, couleurs: mn.couleurs, multMinage: d.minage, multElec: d.elec, peutRecevoir: pl.statut === 'ouvert',
+    reseau: r, couleurs: mn.couleurs, multMinage: d.minage, multElec: d.elec * indiceElec(maintenant, partie.simulation ? partie.simulation.seed : 0), peutRecevoir: pl.statut === 'ouvert',
     logement: partie.profil.logement, temperature, rng: Math.random, bruit: d.bruit, alt,
     prixHebergeur: id => prixHebergeurEUR(id, eurUsd || mn.eurUsd || 1.17),
     supplementAbonnement: supplementAbonnementParSeconde(mn.contrat, mn.kvaInitial),

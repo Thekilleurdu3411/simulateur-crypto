@@ -12,7 +12,7 @@ import { sectionVie, apercuProfil } from './views-vie.js';
 import { changements } from './views-reglages.js';
 import { DATE_MIN_REJEU } from './state.js';
 import { EXPERIENCES, TRANSPORTS } from './vie.js';
-import { maintenant as tJeu, enRejeu } from './horloge.js';
+import { maintenant as tJeu, enRejeu, accelere, vitesseActuelle, vitesseMaximale, VITESSES } from './horloge.js';
 import { actives as notifsActives } from './notifs.js';
 
 const ICONES = {
@@ -52,7 +52,8 @@ export function valeurLive(cle, ctx) {
     case 'statut': {
       const s = M.etat.statut;
       if (s === 'direct') return { t: 'Direct', cls: 'badge ok' };
-      if (s === 'rejeu') return { t: 'Rejeu', cls: 'badge ok' };
+      if (s === 'rejeu') return { t: accelere() ? 'Historique' : 'Rejeu', cls: 'badge ok' };
+      if (s === 'simulation') return { t: 'Simulé', cls: 'badge ok' };
       if (s === 'reconnexion' || s === 'connexion') return { t: s === 'connexion' ? 'Connexion' : 'Reconnexion', cls: 'badge attente' };
       return { t: 'Hors ligne', cls: 'badge ko' };
     }
@@ -205,6 +206,7 @@ export function vueProfil(ctx) {
 export function vueNouvellePartie(ctx) {
   const b = ctx.app.brouillon, p = b.profil, d = DIFFICULTES[b.difficulte];
   const chg = changements(b.difficulte, b.reglages);
+  const acc = (b.reglages && 'vitesseMax' in b.reglages ? b.reglages.vitesseMax : d.vitesseMax) > 1;
   const chips = [1000, 10000, 100000, 1000000, 10000000];
   return `<main class="ecran">
     <div class="entete">
@@ -253,9 +255,9 @@ export function vueNouvellePartie(ctx) {
           <button data-action="depart" data-v="passe" aria-pressed="${b.depart.type === 'passe'}">Date passée</button>
         </div>
         ${b.depart.type === 'passe' ? `<label class="champ">Jour de départ<input id="f-depart" type="date" min="${DATE_MIN_REJEU}" max="${new Date(Date.now() - 864e5).toISOString().slice(0, 10)}" value="${e(b.depart.jour)}" data-input="depart-jour"></label>
-          <p class="discret" style="font-size:13px">Le marché rejoue les vraies bougies de ce jour-là, minute par minute, au rythme réel. Réseau Bitcoin, météo, euro-dollar et jours Tempo suivent aussi la date. Possible depuis le 5 janvier 2020 (premières cotations en euros).</p>
+          <p class="discret" style="font-size:13px">Le marché rejoue les vraies bougies de ce jour-là${acc ? ', aussi vite que tu le choisis' : ', minute par minute, au rythme réel'}. Réseau Bitcoin, météo, euro-dollar et jours Tempo suivent aussi la date. Possible depuis le 5 janvier 2020 (premières cotations en euros).${acc ? " Une fois aujourd'hui rattrapé, le marché devient simulé." : ''}</p>
           <div class="carte alerte" style="font-size:12px;gap:4px"><span>Pas encore rejoués : perpétuels, minage hors Bitcoin, carnet d'ordres réel (reconstitué autour du prix). Salaires, loyers et tarifs d'électricité restent ceux de 2026.</span></div>`
-        : `<p class="discret" style="font-size:13px">Ta partie démarre maintenant, synchronisée sur le marché réel.</p>`}
+        : `<p class="discret" style="font-size:13px">${acc ? "Ta partie démarre aujourd'hui avec les vrais prix, puis le temps file à la vitesse que tu choisis : le marché, le réseau Bitcoin et l'actualité deviennent simulés, réalistes et imprévisibles." : 'Ta partie démarre maintenant, synchronisée sur le marché réel.'}</p>`}
       </div>
     </section>
     <section class="section">
@@ -288,10 +290,19 @@ export function vueJeu(ctx) {
         <div style="display:flex;flex-direction:column;min-width:0"><span class="n">${e(partie.profil.prenom)}</span><span class="d">${live('horloge', ctx)} · ${e(d.nom)}</span></div></div>
       ${live('statut', ctx, 'badge')}
     </header>
+    ${accelere() ? barreVitesse() : ''}
     <main class="contenu">${corps}</main>
     <nav class="nav" aria-label="Navigation principale">
       ${ONGLETS.map(([id, nom]) => `<button data-action="onglet" data-v="${id}" ${app.onglet === id ? 'aria-current="page"' : ''}>${icone(id)}${nom}</button>`).join('')}
     </nav>`;
+}
+
+// Temps accéléré : vitesse réglable, pause comprise (jusqu'au maximum de la difficulté).
+function barreVitesse() {
+  const v = vitesseActuelle(), max = vitesseMaximale();
+  return `<div class="barre-vitesse" role="group" aria-label="Vitesse du temps">
+    ${VITESSES.filter(([x]) => x <= max).map(([x, nom]) => `<button class="puce" data-action="vitesse" data-v="${x}" aria-pressed="${v === x}">${x === 0 ? '⏸ ' : ''}${nom}</button>`).join('')}
+  </div>`;
 }
 
 function ongletBientot(titre, version, texte) {
@@ -326,6 +337,11 @@ function ongletAccueil(ctx) {
       ${etapes.map((x, i) => `<div class="etape ${x[1] ? 'faite' : ''}"><span class="rond">${x[1] ? '✓' : i + 1}</span><span class="txt">${x[0]}</span></div>`).join('')}
       <button class="bouton petit" data-action="onglet" data-v="${pl.statut === 'ouvert' && pl.soldeEUR > 0 ? 'marche' : 'finances'}">${pl.statut === 'ouvert' && pl.soldeEUR > 0 ? 'Aller au marché' : 'Aller aux finances'}</button>
     </section>` : ''}
+    ${(partie.actualites || []).length ? `<section class="section"><div class="section-titre"><h2>Actualités</h2>${M.phase() ? `<span class="discret" style="font-size:12px">marché ${e(M.phase())}</span>` : ''}</div>
+      <div class="carte" style="gap:0;padding:4px 16px">${partie.actualites.slice(0, 5).map(a => `<div class="rangee" style="min-height:0;padding:10px 0;align-items:flex-start;gap:10px;font-size:13px">
+        <span class="num discret" style="flex-shrink:0">${e(new Date(a.t).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }))}</span>
+        <span style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font-weight:700;color:var(--texte)">${e(a.titre)}</span><span class="discret">${e(a.texte)}</span></span>
+        ${a.impact ? `<span class="num ${a.impact.pct >= 0 ? 'hausse' : 'baisse'}" style="flex-shrink:0">${a.impact.pct > 0 ? '+' : ''}${a.impact.pct} %</span>` : ''}</div>`).join('')}</div></section>` : ''}
     <section class="section">
       <div class="section-titre"><h2>Mes cryptos</h2></div>
       ${actifs.length ? `<div class="carte liste-lignes" style="padding:0 16px;gap:0">

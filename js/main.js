@@ -2,7 +2,8 @@
 import * as M from './market.js';
 import { DIFFICULTES, INTERVALLES, REGLAGES, reglesDe, nettoyerReglages } from './config.js';
 import { vueReglages, valeurTexte } from './views-reglages.js';
-import { reglerHorloge, enRejeu } from './horloge.js';
+import { reglerHorloge, enRejeu, accelere, visibilite, changerVitesse, vitesseActuelle } from './horloge.js';
+import { creerSimulation } from './simu.js';
 import { notifier, activer as activerNotifs, desactiver as desactiverNotifs, actives as notifsActives, natif } from './notifs.js';
 import { charger, sauver, effacer, nouvellePartie, demarrerKyc, verifierKyc, journal, DATE_MIN_REJEU, dateDepart, validerSauvegarde } from './state.js';
 import { acheterAuMarche, vendreAuMarche } from './engine.js';
@@ -17,7 +18,7 @@ import { vueLancement, vueProfil, vueNouvellePartie, vueJeu, vueSuperpositions, 
 import { dessinerBougies } from './chart.js';
 import * as D from './donnees.js';
 import * as F from './marchefutures.js';
-import { futuresDe, transferer, ouvrirPosition, fermerPosition, surPrixMarque, rattraper as rattraperFut } from './jeufutures.js';
+import { futuresDe, transferer, ouvrirPosition, fermerPosition, surPrixMarque, rattraper as rattraperFut, surBougieSpot } from './jeufutures.js';
 import { acheterRig, changerCrypto, convertirEnBTC, envoyer, rapatrier, changerCompteur } from './jeuminage.js';
 import { prixAltEUR, calculerRig } from './altcoins.js';
 import { minageDe, acheter as acheterMachine, demarrer as demarrerMachine, arreter as arreterMachine, avancerPartie, joursEntre, changerMode, depoussierer, devisReparation, reparer, vendre, valeurReventeEUR, acheterVentilation } from './jeuminage.js';
@@ -29,7 +30,7 @@ const racine = document.getElementById('app');
 const superpositions = document.getElementById('superpositions');
 
 let partie = charger();
-reglerHorloge(partie);
+reglerHorloge(partie, partie ? reglesDe(partie).vitesseMax : 1);
 const saisieVide = () => ({ montant: '', quantite: '', prix: '', stop: '', limiteStop: '' });
 const app = {
   ecran: 'lancement',
@@ -111,7 +112,8 @@ function verifierJour(jour) {
 
 // L'horloge du jeu change (nouvelle partie à une date passée, abandon d'un rejeu) : on recharge les données.
 function changerHorloge() {
-  reglerHorloge(partie);
+  reglerHorloge(partie, partie ? reglesDe(partie).vitesseMax : 1);
+  F.changerMode();
   M.changerMode();
   D.changerMode().then(() => preparerMeteo()).catch(() => {});
   D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).catch(() => {});
@@ -291,8 +293,13 @@ async function placerOrdreEnAttente(c) {
 
 // Bougie d'une minute en direct : on vérifie les ordres de cette paire.
 function surBougie(s, k) {
+  // Rejeu et simulation : les perpétuels peuvent être liquidés au plus haut ou au plus bas de la bougie
+  if (partie && partie.futures && partie.futures.positions.length && enRejeu()) {
+    const ev = surBougieSpot(partie, s.replace(/EUR$/, ''), k.h, k.l, Math.min(tJeu(), k.fin || k.t + 60000), D.etat.eurUsd);
+    if (ev.length) { sauver(partie); toast(ev[ev.length - 1], 'erreur'); if (app.ecran === 'jeu') rendre(); }
+  }
   if (!partie || !ordresDe(partie).some(o => o.s === s)) return;
-  const evts = traiterPeriode(partie, s, { debut: k.t, fin: k.t + 60000, haut: k.h, bas: k.l, cloture: k.c }, difficulte().frais);
+  const evts = traiterPeriode(partie, s, { debut: k.t, fin: k.fin || k.t + 60000, haut: k.h, bas: k.l, cloture: k.c }, difficulte().frais);
   partie.plateforme.suiviJusqua = Math.max(partie.plateforme.suiviJusqua || 0, k.t);
   if (evts.length) {
     sauver(partie);
@@ -398,7 +405,7 @@ function importer() {
     const err = validerSauvegarde(obj);
     if (err) return toast(err, 'erreur');
     const remplacer = () => {
-      partie = obj; sauver(partie); changerHorloge();
+      partie = obj; changerHorloge(); sauver(partie);
       app.onglet = 'accueil'; app.crypto = null; app.absence = null;
       changerEcran('jeu');
       toast('Sauvegarde importée : ' + (obj.profil.prenom || 'partie') + '.', 'ok');
@@ -454,6 +461,7 @@ const actions = {
   'vers-reglages': () => changerEcran('reglages'),
   'fin-reglages': () => changerEcran('partie'),
   'reg-reset': () => { app.brouillon.reglages = {}; rendre(); },
+  vitesse: v => { changerVitesse(Number(v)); sauver(partie); lancerRattrapage(false); rendre(); },
   depart: v => { app.brouillon.depart.type = v; rendre(); },
   reg: v => {
     const i = v.indexOf(':'), cle = v.slice(0, i), brut = v.slice(i + 1);
@@ -471,8 +479,8 @@ const actions = {
       if (err) return toast(err, 'erreur');
     }
     partie = nouvellePartie({ profil, difficulte: b.difficulte, capital: b.capital, reglages: b.reglages, depart: b.depart });
-    sauver(partie);
     changerHorloge();
+    sauver(partie);
     app.onglet = 'accueil'; app.crypto = null; app.graph = null; app.absence = null;
     changerEcran('jeu');
   },
@@ -694,6 +702,7 @@ M.ecouter((type, symbole, donnees) => {
 function marquerVu() { if (partie) { partie.vuLe = tJeu(); sauver(partie); } }
 setInterval(marquerVu, 30000);
 document.addEventListener('visibilitychange', () => {
+  visibilite(document.visibilityState === 'visible'); // temps accéléré : arrêté pendant l'absence
   if (document.visibilityState === 'hidden') marquerVu();
   else { const v = partie?.vuLe; lancerRattrapage(true).then(() => rattraperMinage(v)).then(() => rattraperDerives(v)).then(marquerVu); }
 });
@@ -708,6 +717,52 @@ setInterval(() => {
 }, 1000);
 
 if (partie) verifierKyc(partie) && sauver(partie);
+
+// Simulation du marché au-delà d'aujourd'hui (temps accéléré) : enregistrée dans la partie.
+M.brancherSimulation(() => partie && partie.simulation, async ({ debut, prix, volumes, stats0 }) => {
+  if (!partie || partie.simulation) return;
+  const reseau = await D.reseauDuJour().catch(() => null);
+  partie.simulation = creerSimulation({ debut, seed: Math.floor(Math.random() * 2 ** 32), prix, volumes, stats0, eurUsd: D.etat.eurUsd || 1.17, reseau });
+  partie.actusVues = debut;
+  journal(partie, 'marche', "Le jeu a rattrapé aujourd'hui : à partir de maintenant, le marché, le réseau Bitcoin et l'actualité sont simulés.");
+  sauver(partie);
+  toast("Tu as rattrapé aujourd'hui : place au futur simulé !", 'ok');
+  D.suivreTemps(tJeu());
+  if (app.ecran === 'jeu') rendre();
+});
+D.brancherSimulation(() => partie && partie.simulation);
+
+// Actualités du marché simulé : journal et notification.
+function verifierActualites() {
+  if (!partie || !partie.simulation) return;
+  const t = tJeu(), depuis = partie.actusVues || partie.simulation.debut;
+  if (t <= depuis) return;
+  const liste = M.actualites(depuis, t);
+  partie.actusVues = t;
+  if (!liste.length) return;
+  for (const a of liste) partie.historique.unshift({ t: a.t, type: 'actu', texte: a.titre + ' — ' + a.texte + (a.impact ? ` (${a.impact.cible} ${a.impact.pct > 0 ? '+' : ''}${a.impact.pct} %)` : '') });
+  partie.historique.sort((a, b) => b.t - a.t);
+  if (partie.historique.length > 300) partie.historique.length = 300;
+  partie.actualites = [...liste.reverse(), ...(partie.actualites || [])].slice(0, 30);
+  sauver(partie);
+  toast('📰 ' + liste[0].titre, '');
+  if (app.ecran === 'jeu' && app.onglet === 'accueil') rendre();
+}
+
+// Temps accéléré : la vie, le minage, les impôts et les données suivent le temps du jeu.
+setInterval(() => {
+  if (!partie || !accelere() || document.visibilityState === 'hidden' || vitesseActuelle() === 0) return;
+  avancerVieJeu(null);
+  verifierImpots();
+  verifierActualites();
+  if (partie.futures && partie.futures.positions.length) F.demarrer();
+  const evts = avancerMinage();
+  if (evts.length) { sauver(partie); toast(evts[evts.length - 1], 'ok'); if (app.ecran === 'jeu') rendre(); }
+  D.suivreTemps(tJeu()).then(maj => { if (maj && app.ecran === 'jeu' && app.onglet === 'minage') rendre(); });
+  if (partie.minage && partie.minage.lieu && !D.meteoAJour(tJeu())) preparerMeteo();
+  D.chargerTempo([jourTempo(tJeu()), jourTempo(tJeu() + 864e5)]).catch(() => {});
+}, 2000);
+
 rendre();
 M.demarrer();
 const vuAuDemarrage = partie?.vuLe;

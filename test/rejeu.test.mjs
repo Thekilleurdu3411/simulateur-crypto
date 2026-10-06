@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { maintenant, reglerHorloge, enRejeu } from '../js/horloge.js';
+import { maintenant, reglerHorloge, enRejeu, changerVitesse, visibilite, accelere, etatHorloge } from '../js/horloge.js';
 import { nouvellePartie, dateDepart } from '../js/state.js';
 import { rapportHashprice } from '../js/donnees.js';
 import { carnetSynthetique, DEMI_ECART_REJEU } from '../js/market.js';
@@ -10,7 +10,8 @@ test('horloge : direct par défaut, décalée pour une partie à une date passé
   reglerHorloge(null);
   assert.equal(enRejeu(), false);
   assert.ok(Math.abs(maintenant() - Date.now()) < 5);
-  const p = nouvellePartie({ profil: { situation: 'sans' }, difficulte: 'expert', capital: 1000, depart: { type: 'passe', jour: '2021-04-14' } });
+  const p = nouvellePartie({ profil: { situation: 'sans' }, difficulte: 'realite', capital: 1000, depart: { type: 'passe', jour: '2021-04-14' } });
+  assert.equal(p.horloge, undefined);
   reglerHorloge(p);
   assert.equal(enRejeu(), true);
   assert.equal(new Date(maintenant()).toISOString().slice(0, 7), '2021-04');
@@ -58,4 +59,28 @@ test('import de sauvegarde : validation', async () => {
   assert.ok(validerSauvegarde({ a: 1 }));
   assert.ok(validerSauvegarde(null));
   assert.ok(validerSauvegarde({ ...p, difficulte: 'triche' }));
+});
+
+test('temps accéléré : vitesse, pause, arrêt quand l\'appli est quittée', async () => {
+  const p = nouvellePartie({ profil: { situation: 'sans' }, difficulte: 'investisseur', capital: 1000, depart: { type: 'passe', jour: '2022-03-01' } });
+  assert.ok(p.horloge && p.horloge.t === p.creeLe);
+  reglerHorloge(p, 10080);
+  assert.equal(accelere(), true);
+  changerVitesse(10080);
+  const a = maintenant();
+  await new Promise(r => setTimeout(r, 50));
+  const b = maintenant();
+  assert.ok(b - a > 50 * 10080 * 0.8, 'avance ' + (b - a));
+  visibilite(false);
+  const c = maintenant();
+  await new Promise(r => setTimeout(r, 30));
+  assert.equal(maintenant(), c);
+  visibilite(true);
+  changerVitesse(0);
+  const d = maintenant();
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(maintenant(), d);
+  assert.equal(etatHorloge().pause, true);
+  reglerHorloge(null);
+  assert.equal(accelere(), false);
 });
