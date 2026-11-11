@@ -1,30 +1,30 @@
 {
   "source": "whattomine.com (coins.json et asic.json)",
-  "maj": 1794352870653,
+  "maj": 1794377922627,
   "coins": {
     "RVN": {
       "nom": "Ravencoin",
       "algo": "KawPow",
       "blockTime": 60,
       "reward": 1250,
-      "nethash": 488339618072,
-      "btc": 1.6661691677295053e-8
+      "nethash": 426208228175,
+      "btc": 1.676445480584649e-8
     },
     "ETC": {
       "nom": "Ethereum Classic",
       "algo": "Etchash",
-      "blockTime": 13.3372,
+      "blockTime": 13.4572,
       "reward": 1.589248,
-      "nethash": 199893156617980,
-      "btc": 0.0000907709424438957
+      "nethash": 189684799188638,
+      "btc": 0.00009088016833553445
     },
     "ERG": {
       "nom": "Ergo",
       "algo": "Autolykos",
       "blockTime": 120,
-      "reward": 3.0086,
-      "nethash": 511975061367,
-      "btc": 0.00000274990508217172
+      "reward": 3,
+      "nethash": 523711283200,
+      "btc": 0.0000024948028326982782
     },
     "LTC": {
       "nom": "Litecoin",
@@ -32,31 +32,31 @@
       "blockTime": 162,
       "reward": 6.25,
       "nethash": 2618759607718648,
-      "btc": 0.0006840863481043554
+      "btc": 0.0006883309294768753
     },
     "DOGE": {
       "nom": "Dogecoin",
       "algo": "Scrypt",
-      "blockTime": 62,
+      "blockTime": 63,
       "reward": 10000,
-      "nethash": 4253158215002761,
-      "btc": 9.185293160492488e-7
+      "nethash": 3813870670805015,
+      "btc": 9.232257204293507e-7
     },
     "XMR": {
       "nom": "Monero",
       "algo": "RandomX",
       "blockTime": 123,
-      "reward": 0.60328498,
-      "nethash": 6432664107,
-      "btc": 0.007573764712263383
+      "reward": 0.6040985,
+      "nethash": 6148865205,
+      "btc": 0.0076753297998561065
     },
     "KAS": {
       "nom": "Kaspa",
       "algo": "kHeavyHash",
       "blockTime": 0.1001,
       "reward": 1.94454365,
-      "nethash": 343259008420993600,
-      "btc": 4.010956229321473e-7
+      "nethash": 333120239657930240,
+      "btc": 4.047412938320269e-7
     }
   }
 }
