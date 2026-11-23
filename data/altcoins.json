@@ -1,62 +1,62 @@
 {
   "source": "whattomine.com (coins.json et asic.json)",
-  "maj": 1795376342609,
+  "maj": 1795395138240,
   "coins": {
     "RVN": {
       "nom": "Ravencoin",
       "algo": "KawPow",
       "blockTime": 59,
       "reward": 1250,
-      "nethash": 685901875832,
-      "btc": 1.511864928208649e-8
+      "nethash": 696298401971,
+      "btc": 1.4732499550249528e-8
     },
     "ETC": {
       "nom": "Ethereum Classic",
       "algo": "Etchash",
-      "blockTime": 13.6002,
+      "blockTime": 13.4046,
       "reward": 1.589248,
-      "nethash": 170594789434260,
-      "btc": 0.00009189767210680025
+      "nethash": 199649467570773,
+      "btc": 0.00009297844160601924
     },
     "ERG": {
       "nom": "Ergo",
       "algo": "Autolykos",
-      "blockTime": 122,
-      "reward": 3,
-      "nethash": 517800993170,
-      "btc": 0.000003062932896574472
+      "blockTime": 119,
+      "reward": 3.0026,
+      "nethash": 563976407745,
+      "btc": 0.00000295335902843001
     },
     "LTC": {
       "nom": "Litecoin",
       "algo": "Scrypt",
-      "blockTime": 139,
+      "blockTime": 137,
       "reward": 6.25,
-      "nethash": 2809117074026990,
-      "btc": 0.0006568838346470736
+      "nethash": 2850126082406946,
+      "btc": 0.0006543556561327466
     },
     "DOGE": {
       "nom": "Dogecoin",
       "algo": "Scrypt",
       "blockTime": 63,
       "reward": 10000,
-      "nethash": 2881628884724855,
-      "btc": 9.083423917652554e-7
+      "nethash": 2230665546809930,
+      "btc": 9.011625003949546e-7
     },
     "XMR": {
       "nom": "Monero",
       "algo": "RandomX",
-      "blockTime": 119,
-      "reward": 0.6002407,
-      "nethash": 6665247170,
-      "btc": 0.008068522749110721
+      "blockTime": 115,
+      "reward": 0.60375131,
+      "nethash": 7180418777,
+      "btc": 0.00803726209211435
     },
     "KAS": {
       "nom": "Kaspa",
       "algo": "kHeavyHash",
       "blockTime": 0.1,
       "reward": 1.94454365,
-      "nethash": 327008779308338300,
-      "btc": 4.212356101848117e-7
+      "nethash": 322760025347862400,
+      "btc": 4.205753516650053e-7
     }
   }
 }
